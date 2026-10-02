@@ -24,6 +24,11 @@ jobs:
           distribution: temurin
           java-version: "21"
           cache: maven
+      - name: Cache Maven wrapper distribution
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/wrapper
+          key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
       - name: Verify (format, Error Prone/NullAway, unit + integration tests, ArchUnit, coverage, SpotBugs)
         run: ./mvnw -B verify -Pci
       - name: Upload test and coverage reports
@@ -48,6 +53,11 @@ jobs:
           distribution: temurin
           java-version: "25"
           cache: maven
+      - name: Cache Maven wrapper distribution
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/wrapper
+          key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
       - name: Verify on JDK 25 (release target stays 21)
         run: ./mvnw -B verify
 
