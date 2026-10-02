@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>io.github.bsamsonov</groupId>
+    <artifactId>payment-service-poc</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>payment-service-poc</name>
+    <description>PoC: internal payment service integrating with Stripe</description>
+
+    <properties>
+        <java.version>21</java.version>
+        <maven.compiler.release>${java.version}</maven.compiler.release>
+
+        <archunit.version>1.5.1</archunit.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <spotless.version>3.10.3</spotless.version>
+        <palantir-java-format.version>2.101.0</palantir-java-format.version>
+        <error-prone.version>2.50.0</error-prone.version>
+        <nullaway.version>0.14.2</nullaway.version>
+        <jspecify.version>1.0.1</jspecify.version>
+        <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
+        <findsecbugs.version>1.14.0</findsecbugs.version>
+        <jacoco.minimum.line.coverage>0.80</jacoco.minimum.line.coverage>
+        <!-- Set by JaCoCo; empty default keeps @{argLine} valid when JaCoCo is skipped -->
+        <argLine/>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.jspecify</groupId>
+            <artifactId>jspecify</artifactId>
+            <version>${jspecify.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <version>${archunit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Static analysis at compile time: Error Prone + NullAway (JSpecify, @NullMarked packages) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-XDcompilePolicy=simple</arg>
+                        <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
+                        <arg>--should-stop=ifError=FLOW</arg>
+                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
+                    </compilerArgs>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.google.errorprone</groupId>
+                            <artifactId>error_prone_core</artifactId>
+                            <version>${error-prone.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.uber.nullaway</groupId>
+                            <artifactId>nullaway</artifactId>
+                            <version>${nullaway.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+
+            <!-- Formatting: `./mvnw spotless:apply` fixes, `spotless:check` (bound to verify) fails the build -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <palantirJavaFormat>
+                            <version>${palantir-java-format.version}</version>
+                            <formatJavadoc>true</formatJavadoc>
+                        </palantirJavaFormat>
+                        <removeUnusedImports/>
+                        <formatAnnotations/>
+                    </java>
+                    <pom>
+                        <sortPom>
+                            <expandEmptyElements>false</expandEmptyElements>
+                            <nrOfIndentSpace>4</nrOfIndentSpace>
+                        </sortPom>
+                    </pom>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Exposes ${org.mockito:mockito-core:jar} so Mockito runs as a Java agent (no dynamic self-attach) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Unit tests: *Test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                    <excludes>
+                        <exclude>**/*IT.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+
+            <!-- Integration tests: *IT (Testcontainers, WireMock, full context) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <configuration>
+                    <argLine>@{argLine} -javaagent:${org.mockito:mockito-core:jar} -Xshare:off</argLine>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Coverage: unit + integration tests merged, threshold enforced in verify -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <configuration>
+                    <excludes>
+                        <exclude>**/PaymentServiceApplication.class</exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>prepare-agent</id>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>prepare-agent-integration</id>
+                        <goals>
+                            <goal>prepare-agent-integration</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>merge-results</id>
+                        <goals>
+                            <goal>merge</goal>
+                        </goals>
+                        <phase>post-integration-test</phase>
+                        <configuration>
+                            <fileSets>
+                                <fileSet>
+                                    <directory>${project.build.directory}</directory>
+                                    <includes>
+                                        <include>jacoco.exec</include>
+                                        <include>jacoco-it.exec</include>
+                                    </includes>
+                                </fileSet>
+                            </fileSets>
+                            <destFile>${project.build.directory}/jacoco-merged.exec</destFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>report</id>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <phase>verify</phase>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>check</id>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                        <phase>verify</phase>
+                        <configuration>
+                            <dataFile>${project.build.directory}/jacoco-merged.exec</dataFile>
+                            <haltOnFailure>true</haltOnFailure>
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <limits>
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>${jacoco.minimum.line.coverage}</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Slower checks for CI (also runnable locally: ./mvnw verify -Pci) -->
+        <profile>
+            <id>ci</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>${spotbugs-maven-plugin.version}</version>
+                        <configuration>
+                            <effort>Max</effort>
+                            <threshold>Medium</threshold>
+                            <excludeFilterFile>config/spotbugs/exclude.xml</excludeFilterFile>
+                            <plugins>
+                                <plugin>
+                                    <groupId>com.h3xstream.findsecbugs</groupId>
+                                    <artifactId>findsecbugs-plugin</artifactId>
+                                    <version>${findsecbugs.version}</version>
+                                </plugin>
+                            </plugins>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

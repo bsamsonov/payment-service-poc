@@ -1,0 +1,19 @@
+spring:
+  application:
+    name: payment-service
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
