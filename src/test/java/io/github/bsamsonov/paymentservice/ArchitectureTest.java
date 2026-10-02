@@ -11,8 +11,8 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 /**
- * Architecture rules enforced on production code. Layering rules are added together with the layers
- * they protect (see specs).
+ * Architecture rules enforced on production code. Layering rules are added together with the layers they protect (see
+ * specs).
  */
 @AnalyzeClasses(packagesOf = ArchitectureTest.class, importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {

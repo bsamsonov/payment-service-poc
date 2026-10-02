@@ -14,14 +14,25 @@ class PaymentServiceApplicationIT {
 
     @Test
     void livenessAndReadinessProbesAreUpOnRealServer() {
-        RestTestClient client =
-                RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+        RestTestClient client = RestTestClient.bindToServer()
+                .baseUrl("http://localhost:" + port)
+                .build();
 
-        client.get().uri("/actuator/health/liveness").exchange()
-                .expectStatus().isOk()
-                .expectBody().jsonPath("$.status").isEqualTo("UP");
-        client.get().uri("/actuator/health/readiness").exchange()
-                .expectStatus().isOk()
-                .expectBody().jsonPath("$.status").isEqualTo("UP");
+        client.get()
+                .uri("/actuator/health/liveness")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo("UP");
+        client.get()
+                .uri("/actuator/health/readiness")
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.status")
+                .isEqualTo("UP");
     }
 }
