@@ -1,0 +1,23 @@
+# Build
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+out/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# AI review artifacts (local only)
+.review/
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# OS
+.DS_Store
