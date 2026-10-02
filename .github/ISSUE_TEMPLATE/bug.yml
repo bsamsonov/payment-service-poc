@@ -1,0 +1,20 @@
+name: Bug
+description: Something does not work as specified
+labels: [bug]
+body:
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happens
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen (link the spec/AC if possible)
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce

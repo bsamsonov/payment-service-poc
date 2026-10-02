@@ -1,0 +1,6 @@
+# Contract, decisions and build/CI changes always need the owner's review.
+*                @bsamsonov
+/api/            @bsamsonov
+/docs/adr/       @bsamsonov
+/.github/        @bsamsonov
+/pom.xml         @bsamsonov
