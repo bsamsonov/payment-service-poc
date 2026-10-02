@@ -1,0 +1,25 @@
+# Local git hooks. Install once per clone: `lefthook install`.
+# Hooks are a convenience; CI is the source of truth.
+# Budget: pre-commit <= ~10 s, pre-push <= ~2 min.
+
+pre-commit:
+  parallel: true
+  commands:
+    format:
+      glob: "{*.java,pom.xml}"
+      run: ./mvnw -q -B spotless:apply
+      stage_fixed: true
+    secrets:
+      run: gitleaks git --pre-commit --staged --redact --no-banner
+
+commit-msg:
+  commands:
+    conventional-commit:
+      run: scripts/hooks/check-commit-msg.sh {1}
+
+pre-push:
+  commands:
+    verify-fast:
+      # Compilation (Error Prone/NullAway), formatting, unit tests, ArchUnit.
+      # Integration tests and the coverage gate run in CI (or locally: ./mvnw verify).
+      run: ./mvnw -q -B verify -DskipITs -Djacoco.skip=true
