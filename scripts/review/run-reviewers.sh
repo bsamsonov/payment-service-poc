@@ -55,7 +55,8 @@ claude_agent() {
   claude_result "$id"
 }
 
-# Built-in /code-review skill in headless mode, read-only git/gh access. The model is explicit: without it the
+# Built-in /code-review skill in headless mode. Only gh read commands: git diff/log/show accept --output=<file>,
+# which would let a prompt-injected reviewer write files. The model is explicit: without it the
 # user's default model applies (which may be a small one).
 claude_code_review() {
   local id="$1"
@@ -67,7 +68,7 @@ claude_code_review() {
     --strict-mcp-config \
     --no-session-persistence \
     --settings "$CLAUDE_REVIEW_SETTINGS" \
-    --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*)") \
+    --allowedTools "Read,Grep,Glob,Bash(gh pr view:*),Bash(gh pr diff:*)") \
     >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err" || return 1
   claude_result "$id"
 }
