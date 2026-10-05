@@ -45,13 +45,19 @@ jq -e '.is_error == false' "$round_dir/logs/aggregator.json" >/dev/null \
 
 # Structured output when --json-schema is honoured; otherwise the JSON object from the text result
 # (the agent is instructed to answer with JSON only, possibly inside a ```json fence).
+# aggregate.json marks the round as reviewed (delta rounds start from it), so it appears only after validation.
+rm -f "$round_dir/aggregate.json"
+tmp="$round_dir/aggregate.json.tmp"
 jq 'if (.structured_output | type) == "object" then .structured_output
     else .result | sub("^[^{]*"; "") | sub("[^}]*$"; "") | fromjson end' \
-  "$round_dir/logs/aggregator.json" >"$round_dir/aggregate.json" 2>/dev/null \
+  "$round_dir/logs/aggregator.json" >"$tmp" 2>/dev/null \
   || die "aggregator output is not valid JSON, see $round_rel/logs/aggregator.json"
 jq -e 'has("summary") and has("findings") and has("rejected") and has("must_review") and has("skim") and has("previous")
-       and all(.findings[]; has("id") and has("path") and has("line") and has("severity") and has("body") and has("sources"))' \
-  "$round_dir/aggregate.json" >/dev/null || die "aggregator JSON misses required fields, see $round_rel/aggregate.json"
+       and has("reviewers")
+       and all(.findings[]; has("id") and has("path") and has("line") and has("severity") and has("body") and has("sources"))
+       and all(.reviewers[]; has("id") and has("raw_findings"))' \
+  "$tmp" >/dev/null || die "aggregator JSON misses required fields, see $round_rel/aggregate.json.tmp"
+mv "$tmp" "$round_dir/aggregate.json"
 agg="$round_dir/aggregate.json"
 
 # Open findings after this round: earlier open findings not reported as fixed + this round's findings (ids R<n>-Fk).
@@ -65,7 +71,7 @@ jq --arg r "R$round-" --argjson prev "$prev_open" '
 
 # Per-reviewer stats: raw findings as counted by the aggregator, confirmed = findings listing the reviewer.
 jq -r --arg pr "$pr" --arg round "$round" '
-  . as $a | ($a.reviewers // [])[]
+  . as $a | $a.reviewers[]
   | .id as $id | [$pr, $round, $id, .raw_findings, ([$a.findings[] | select(.sources | index($id))] | length)] | @tsv
 ' "$agg" >"$round_dir/stats.tsv"
 
