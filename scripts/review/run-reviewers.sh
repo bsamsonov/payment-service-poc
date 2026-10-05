@@ -105,6 +105,16 @@ JSON
   return "$rc"
 }
 
+# A report counts only if it has the structure its prompt requires; a truncated or chatty answer does not.
+report_complete() {
+  local id="$1" f="$round_dir/raw/$1.md"
+  case "$id" in
+    checklist)               grep -q '^# L1 checklist review' "$f" && grep -qE '^\| *RC-[0-9]+' "$f" ;;
+    bugs-opus|deepseek|glm)  grep -q '^# L2 bug review' "$f" && grep -q '^## Findings' "$f" ;;
+    *)                       [[ -s "$f" ]] ;;  # /code-review has a free-form answer
+  esac
+}
+
 run_one() {
   local id="$1"
   case "$id" in
@@ -127,9 +137,10 @@ declare -A pids=()
 for id in "${REVIEWERS[@]}"; do
   ( start=$SECONDS rc=0
     run_one "$id" || rc=$?
-    if [[ $rc -eq 0 && -s "$round_dir/raw/$id.md" ]]; then status=ok
-    elif [[ $rc -eq 0 ]]; then status=failed rc=empty
-    else status=failed; fi
+    if [[ $rc -ne 0 ]]; then status=failed
+    elif ! [[ -s "$round_dir/raw/$id.md" ]]; then status=failed rc=empty
+    elif ! report_complete "$id"; then status=failed rc=incomplete
+    else status=ok; fi
     printf '%s %s %s\n' "$status" "$(( SECONDS - start ))" "$rc" >"$round_dir/logs/$id.status" ) &
   pids[$id]=$!
 done
