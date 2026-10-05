@@ -30,6 +30,15 @@ L1=(checklist)
 L2=(bugs-opus deepseek glm code-review)
 read -ra REVIEWERS <<<"${PR_REVIEW_REVIEWERS:-${L1[*]} ${L2[*]}}"
 
+# run_one is called in a conditional context where `set -e` is off, so every failure must be returned explicitly.
+
+# Extract the text result of a headless Claude run; fails on an error result or an empty result.
+claude_result() {
+  local id="$1" json="$round_dir/logs/$1.json"
+  jq -e '.is_error == false and (.result | type == "string") and (.result | length > 0)' "$json" >/dev/null || return 1
+  jq -r '.result' "$json" >"$round_dir/raw/$id.md" || return 1
+}
+
 # Headless Claude Code with a project subagent: no MCP servers, no skills, no hooks, no saved session.
 claude_agent() {
   local agent="$1" id="$2"
@@ -42,9 +51,8 @@ claude_agent() {
     --disable-slash-commands \
     --no-session-persistence \
     --settings "$CLAUDE_REVIEW_SETTINGS") \
-    >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err"
-  jq -e '.is_error == false' "$round_dir/logs/$id.json" >/dev/null
-  jq -r '.result' "$round_dir/logs/$id.json" >"$round_dir/raw/$id.md"
+    >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err" || return 1
+  claude_result "$id"
 }
 
 # Built-in /code-review skill in headless mode, read-only git/gh access. The model is explicit: without it the
@@ -60,9 +68,8 @@ claude_code_review() {
     --no-session-persistence \
     --settings "$CLAUDE_REVIEW_SETTINGS" \
     --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*)") \
-    >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err"
-  jq -e '.is_error == false' "$round_dir/logs/$id.json" >/dev/null
-  jq -r '.result' "$round_dir/logs/$id.json" >"$round_dir/raw/$id.md"
+    >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err" || return 1
+  claude_result "$id"
 }
 
 # OpenCode model on a copy of the bundle outside the repository, so that the project AGENTS.md is not loaded.
