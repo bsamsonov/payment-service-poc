@@ -14,8 +14,17 @@ Java 21 (release target, CI also checks JDK 25) · Spring Boot 4.1 · Spring MVC
 Resilience4j · Spring Security (JWT) · Testcontainers · WireMock · Maven. Rationale: [ADR-0002](docs/adr/0002-technology-stack.md).
 
 ## Getting started
-Prerequisites: JDK 21+, Docker (for integration tests), [Lefthook](https://lefthook.dev) and
-[gitleaks](https://github.com/gitleaks/gitleaks) for local git hooks.
+Prerequisites — install these yourself; Maven, all Maven plugins and analyzers come via `./mvnw`:
+
+| Tool | Needed for | Install |
+|---|---|---|
+| JDK 21+ | build, run | any distribution, e.g. [Temurin](https://adoptium.net) or `sdk install java 21-tem` |
+| Docker | integration tests (Testcontainers) | [Docker Engine](https://docs.docker.com/engine/install/) |
+| [Lefthook](https://lefthook.dev) | local git hooks | `brew install lefthook`, or a binary from [releases](https://github.com/evilmartians/lefthook/releases) into your `PATH` |
+| [gitleaks](https://github.com/gitleaks/gitleaks) | pre-commit secrets scan | `brew install gitleaks`, or a binary from [releases](https://github.com/gitleaks/gitleaks/releases) into your `PATH` |
+
+Without gitleaks in `PATH` the pre-commit hook fails. Without `lefthook install` no local hooks run at all —
+CI still runs every check.
 
 ```bash
 lefthook install                              # once per clone
