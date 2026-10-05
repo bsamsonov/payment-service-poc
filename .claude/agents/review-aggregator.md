@@ -36,6 +36,8 @@ Procedure:
      risky spots even without a confirmed finding;
    - `skim`: files or groups that can be skimmed (generated, config, repetitive tests, docs) with a reason.
 8. In delta mode, report the status of every previous finding in `previous`.
+9. In `reviewers`, give for every raw report the number of distinct findings it raised (for the checklist
+   reviewer: failed rules), counted before deduplication and verification.
 
 Respond with JSON matching the provided schema only. Write all text in English, concise and concrete. Bodies of
 findings are posted as PR comments: state the problem, the scenario and the suggested fix in 2–6 sentences, with

@@ -1,12 +1,22 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["summary", "findings", "rejected", "must_review", "skim", "previous"],
+  "required": [
+    "summary",
+    "findings",
+    "rejected",
+    "must_review",
+    "skim",
+    "previous",
+    "reviewers"
+  ],
   "properties": {
     "summary": {
       "type": "array",
       "description": "What the PR changes, 3-5 short lines.",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "findings": {
       "type": "array",
@@ -14,17 +24,61 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "title", "severity", "path", "line", "in_diff", "rule", "sources", "body"],
+        "required": [
+          "id",
+          "title",
+          "severity",
+          "path",
+          "line",
+          "in_diff",
+          "rule",
+          "sources",
+          "body"
+        ],
         "properties": {
-          "id": {"type": "string", "description": "F1, F2, ... in this round"},
-          "title": {"type": "string"},
-          "severity": {"type": "string", "enum": ["blocker", "major", "minor"]},
-          "path": {"type": "string", "description": "Path relative to the repository root"},
-          "line": {"type": "integer", "minimum": 1, "description": "Line in the post-change file"},
-          "in_diff": {"type": "boolean", "description": "The line is an added or context line of the PR diff"},
-          "rule": {"type": "string", "description": "RC-NN if a checklist rule applies, else empty"},
-          "sources": {"type": "array", "items": {"type": "string"}, "description": "Reviewer ids that reported it"},
-          "body": {"type": "string", "description": "Comment text: problem, scenario, suggested fix"}
+          "id": {
+            "type": "string",
+            "description": "F1, F2, ... in this round"
+          },
+          "title": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "blocker",
+              "major",
+              "minor"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path relative to the repository root"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Line in the post-change file"
+          },
+          "in_diff": {
+            "type": "boolean",
+            "description": "The line is an added or context line of the PR diff"
+          },
+          "rule": {
+            "type": "string",
+            "description": "RC-NN if a checklist rule applies, else empty"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Reviewer ids that reported it"
+          },
+          "body": {
+            "type": "string",
+            "description": "Comment text: problem, scenario, suggested fix"
+          }
         }
       }
     },
@@ -33,11 +87,21 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["source", "title", "reason"],
+        "required": [
+          "source",
+          "title",
+          "reason"
+        ],
         "properties": {
-          "source": {"type": "string"},
-          "title": {"type": "string"},
-          "reason": {"type": "string"}
+          "source": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
         }
       }
     },
@@ -47,12 +111,26 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["path", "line", "risk", "question"],
+        "required": [
+          "path",
+          "line",
+          "risk",
+          "question"
+        ],
         "properties": {
-          "path": {"type": "string"},
-          "line": {"type": "integer", "minimum": 1},
-          "risk": {"type": "string"},
-          "question": {"type": "string"}
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "risk": {
+            "type": "string"
+          },
+          "question": {
+            "type": "string"
+          }
         }
       }
     },
@@ -61,10 +139,17 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["what", "why"],
+        "required": [
+          "what",
+          "why"
+        ],
         "properties": {
-          "what": {"type": "string"},
-          "why": {"type": "string"}
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
         }
       }
     },
@@ -74,11 +159,47 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "status", "note"],
+        "required": [
+          "id",
+          "status",
+          "note"
+        ],
         "properties": {
-          "id": {"type": "string"},
-          "status": {"type": "string", "enum": ["fixed", "not_fixed", "partially_fixed"]},
-          "note": {"type": "string"}
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "fixed",
+              "not_fixed",
+              "partially_fixed"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "reviewers": {
+      "type": "array",
+      "description": "Per raw report: reviewer id and the number of distinct findings it raised (checklist: failed rules).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "raw_findings"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "raw_findings": {
+            "type": "integer",
+            "minimum": 0
+          }
         }
       }
     }

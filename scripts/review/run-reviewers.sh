@@ -66,6 +66,7 @@ claude_code_review() {
 }
 
 # OpenCode model on a copy of the bundle outside the repository, so that the project AGENTS.md is not loaded.
+# Only read/search tools stay enabled: subagents (task) would run with the user's global permissions.
 opencode_review() {
   local model="$1" id="$2" work
   [[ -x "$OPENCODE" ]] || { echo "opencode not found: $OPENCODE" >"$round_dir/logs/$id.err"; return 1; }
@@ -80,7 +81,10 @@ opencode_review() {
       "description": "Read-only PR reviewer",
       "mode": "primary",
       "prompt": "{file:./.reviewer-prompt.md}",
-      "permission": {"edit": "deny", "bash": "deny", "webfetch": "deny", "external_directory": "deny"}
+      "tools": {"write": false, "edit": false, "patch": false, "bash": false, "task": false, "todowrite": false,
+                "webfetch": false, "websearch": false, "codesearch": false},
+      "permission": {"edit": "deny", "bash": "deny", "webfetch": "deny", "websearch": "deny", "codesearch": "deny",
+                     "task": "deny", "external_directory": "deny"}
     }
   }
 }
@@ -114,19 +118,28 @@ done
 
 declare -A pids=()
 for id in "${REVIEWERS[@]}"; do
-  ( start=$SECONDS
-    if run_one "$id" && [[ -s "$round_dir/raw/$id.md" ]]; then status=ok; else status=failed; fi
-    printf '%s %s\n' "$status" "$(( SECONDS - start ))" >"$round_dir/logs/$id.status" ) &
+  ( start=$SECONDS rc=0
+    run_one "$id" || rc=$?
+    if [[ $rc -eq 0 && -s "$round_dir/raw/$id.md" ]]; then status=ok
+    elif [[ $rc -eq 0 ]]; then status=failed rc=empty
+    else status=failed; fi
+    printf '%s %s %s\n' "$status" "$(( SECONDS - start ))" "$rc" >"$round_dir/logs/$id.status" ) &
   pids[$id]=$!
 done
 for id in "${!pids[@]}"; do wait "${pids[$id]}" || true; done
 
-ok=() failed=()
 for id in "${REVIEWERS[@]}"; do
-  status=failed secs=?
-  [[ -f "$round_dir/logs/$id.status" ]] && read -r status secs <"$round_dir/logs/$id.status"
-  log "  $id: $status (${secs}s)"
-  if [[ "$status" == ok ]]; then ok+=("$id"); else failed+=("$id"); rm -f "$round_dir/raw/$id.md"; fi
+  status=failed secs=? rc=?
+  [[ -f "$round_dir/logs/$id.status" ]] && read -r status secs rc <"$round_dir/logs/$id.status"
+  log "  $id: $status (${secs}s, exit $rc)"
+  [[ "$status" == ok ]] || rm -f "$round_dir/raw/$id.md"
+done
+
+# Quorum over every reviewer of the round, so that re-running a subset keeps earlier successful results.
+ok=() failed=()
+for f in "$round_dir"/logs/*.status; do
+  id="$(basename "$f" .status)"
+  if [[ "$(cut -d' ' -f1 "$f")" == ok ]]; then ok+=("$id"); else failed+=("$id"); fi
 done
 
 l1_ok=false l2_ok=0
@@ -138,10 +151,10 @@ quorum=true
 [[ "$l1_ok" == true && $l2_ok -ge 1 ]] || quorum=false
 
 jq -n --argjson quorum "$quorum" --argjson degraded "$allow_degraded" --arg head "$head_sha" \
-  --args '{quorum:$quorum, allow_degraded:$degraded, head_sha:$head,
-           ok:($ARGS.positional | map(select(startswith("+")) | ltrimstr("+"))),
-           failed:($ARGS.positional | map(select(startswith("-")) | ltrimstr("-")))}' \
-  "${ok[@]/#/+}" "${failed[@]/#/-}" >"$round_dir/quorum.json"
+  --arg ok "${ok[*]}" --arg failed "${failed[*]}" \
+  '{quorum:$quorum, allow_degraded:$degraded, head_sha:$head,
+    ok:($ok | split(" ") | map(select(. != ""))), failed:($failed | split(" ") | map(select(. != "")))}' \
+  >"$round_dir/quorum.json"
 
 if [[ "$quorum" == false ]]; then
   if [[ "$allow_degraded" == true ]]; then

@@ -5,12 +5,15 @@
 #   guide.md       — guide for the human reviewer (posted as a PR comment)
 #   stats.tsv      — per reviewer: raw findings, confirmed findings
 #
-# Usage: scripts/review/aggregate.sh <round-dir>
+# Usage: scripts/review/aggregate.sh <round-dir> [--reuse]
+#   --reuse  do not call the aggregator again; re-render from logs/aggregator.json
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout
 
-round_dir="${1:?usage: aggregate.sh <round-dir>}"
+round_dir="${1:?usage: aggregate.sh <round-dir> [--reuse]}"
+reuse=false
+[[ "${2:-}" == "--reuse" ]] && reuse=true
 round_dir="$(cd "$round_dir" && pwd)"
 round_rel="${round_dir#"$REPO_ROOT"/}"
 pr="$(jq -r .pr "$round_dir/meta.json")"
@@ -19,37 +22,43 @@ mode="$(jq -r .mode "$round_dir/meta.json")"
 compgen -G "$round_dir/raw/*.md" >/dev/null || die "no raw reports in $round_rel/raw"
 
 reports="$(cd "$round_dir/raw" && ls -1 *.md | sed "s|^|- \`$round_rel/raw/|; s|$|\`|")"
-log "aggregating $(wc -l <<<"$reports") reports"
-(cd "$REPO_ROOT" && timeout "${PR_REVIEW_TIMEOUT:-1200}" claude -p \
-  --agent review-aggregator \
-  --output-format json \
-  --json-schema "$(cat "$SCRIPTS_DIR/aggregate.schema.json")" \
-  --permission-mode dontAsk \
-  --strict-mcp-config \
-  --disable-slash-commands \
-  --no-session-persistence \
-  --settings "$CLAUDE_REVIEW_SETTINGS" \
-  "Aggregate review round \`$round_rel/\` of PR #$pr (mode: $mode).
+if [[ "$reuse" == true && -s "$round_dir/logs/aggregator.json" ]]; then
+  log "reusing logs/aggregator.json"
+else
+  log "aggregating $(wc -l <<<"$reports") reports"
+  (cd "$REPO_ROOT" && timeout "${PR_REVIEW_TIMEOUT:-1200}" claude \
+    -p "Aggregate review round \`$round_rel/\` of PR #$pr (mode: $mode).
 Bundle: \`$round_rel/bundle/\` (start with manifest.md). Raw reports:
-$reports") >"$round_dir/logs/aggregator.json" 2>"$round_dir/logs/aggregator.err" \
-  || die "aggregator failed, see $round_rel/logs/aggregator.err"
-jq -e '.is_error == false and (.structured_output | type == "object")' "$round_dir/logs/aggregator.json" >/dev/null \
-  || die "aggregator returned no structured output, see $round_rel/logs/aggregator.json"
-jq '.structured_output' "$round_dir/logs/aggregator.json" >"$round_dir/aggregate.json"
+$reports" \
+    --agent review-aggregator \
+    --output-format json \
+    --json-schema "$(cat "$SCRIPTS_DIR/aggregate.schema.json")" \
+    --permission-mode dontAsk \
+    --strict-mcp-config \
+    --disable-slash-commands \
+    --no-session-persistence \
+    --settings "$CLAUDE_REVIEW_SETTINGS") >"$round_dir/logs/aggregator.json" 2>"$round_dir/logs/aggregator.err" \
+    || die "aggregator failed, see $round_rel/logs/aggregator.err"
+fi
+jq -e '.is_error == false' "$round_dir/logs/aggregator.json" >/dev/null \
+  || die "aggregator reported an error, see $round_rel/logs/aggregator.json"
+
+# Structured output when --json-schema is honoured; otherwise the JSON object from the text result
+# (the agent is instructed to answer with JSON only, possibly inside a ```json fence).
+jq 'if (.structured_output | type) == "object" then .structured_output
+    else .result | sub("^[^{]*"; "") | sub("[^}]*$"; "") | fromjson end' \
+  "$round_dir/logs/aggregator.json" >"$round_dir/aggregate.json" 2>/dev/null \
+  || die "aggregator output is not valid JSON, see $round_rel/logs/aggregator.json"
+jq -e 'has("summary") and has("findings") and has("rejected") and has("must_review") and has("skim") and has("previous")
+       and all(.findings[]; has("id") and has("path") and has("line") and has("severity") and has("body") and has("sources"))' \
+  "$round_dir/aggregate.json" >/dev/null || die "aggregator JSON misses required fields, see $round_rel/aggregate.json"
 agg="$round_dir/aggregate.json"
 
-# Per-reviewer stats: raw = "### F<n>" headings (L2) or failed rules (L1); confirmed = findings listing the reviewer.
-: >"$round_dir/stats.tsv"
-for f in "$round_dir"/raw/*.md; do
-  id="$(basename "$f" .md)"
-  if [[ "$id" == checklist ]]; then
-    raw="$(grep -cE '^\| *RC-[0-9]+ *\| *fail' "$f" || true)"
-  else
-    raw="$(grep -cE '^#{2,4} *(F[0-9]+|[0-9]+[.)])' "$f" || true)"
-  fi
-  confirmed="$(jq --arg id "$id" '[.findings[] | select(.sources | index($id))] | length' "$agg")"
-  printf '%s\t%s\t%s\t%s\t%s\n' "$pr" "$round" "$id" "$raw" "$confirmed" >>"$round_dir/stats.tsv"
-done
+# Per-reviewer stats: raw findings as counted by the aggregator, confirmed = findings listing the reviewer.
+jq -r --arg pr "$pr" --arg round "$round" '
+  . as $a | ($a.reviewers // [])[]
+  | .id as $id | [$pr, $round, $id, .raw_findings, ([$a.findings[] | select(.sources | index($id))] | length)] | @tsv
+' "$agg" >"$round_dir/stats.tsv"
 
 jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$round_dir/quorum.json" '
   def loc: "`\(.path):\(.line)`";
