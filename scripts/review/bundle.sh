@@ -38,8 +38,8 @@ if [[ "$mode" == "delta" ]]; then
   fi
 fi
 
-round=1
-[[ -n "$prev_dir" ]] && round=$(( $(basename "$prev_dir") + 1 ))
+# Numbering skips aborted rounds (directories without meta.json) instead of reusing them.
+round=$(( $(last_round_number "$pr") + 1 ))
 round_dir="$REVIEW_ROOT/$pr/$round"
 bundle="$round_dir/bundle"
 mkdir -p "$bundle/files" "$round_dir/raw" "$round_dir/logs"

@@ -25,11 +25,13 @@ current_head="$(gh pr view "$pr" --json headRefOid -q .headRefOid)"
   || log "warning: PR head moved to ${current_head:0:7} after review of ${head_sha:0:7}; comments target the reviewed commit"
 
 # Right-side lines (added or context) of the PR diff, as "path<TAB>line".
+# File headers are recognized only between "diff --git" and the first hunk, so content lines starting with "++ "
+# are not mistaken for headers.
 awk '
-  /^diff --git / { path = ""; next }
-  /^\+\+\+ /     { path = ($0 == "+++ /dev/null") ? "" : substr($0, 7); next }
-  /^@@ /         { split($3, a, ","); line = substr(a[1], 2) + 0; next }
-  path == ""     { next }
+  /^diff --git /             { path = ""; header = 1; next }
+  header && /^\+\+\+ /       { path = ($0 == "+++ /dev/null") ? "" : substr($0, 7); next }
+  /^@@ /                     { header = 0; split($3, a, ","); line = substr(a[1], 2) + 0; next }
+  header || path == ""       { next }
   /^\+/          { print path "\t" line; line++; next }
   /^ /           { print path "\t" line; line++; next }
 ' "$round_dir/pr.patch" | sort -u >"$round_dir/commentable.tsv"

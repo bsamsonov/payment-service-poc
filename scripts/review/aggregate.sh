@@ -28,7 +28,7 @@ log "aggregating $(wc -l <<<"$reports") reports"
   --strict-mcp-config \
   --disable-slash-commands \
   --no-session-persistence \
-  --settings '{"disableAllHooks": true}' \
+  --settings "$CLAUDE_REVIEW_SETTINGS" \
   "Aggregate review round \`$round_rel/\` of PR #$pr (mode: $mode).
 Bundle: \`$round_rel/bundle/\` (start with manifest.md). Raw reports:
 $reports") >"$round_dir/logs/aggregator.json" 2>"$round_dir/logs/aggregator.err" \
