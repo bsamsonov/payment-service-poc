@@ -18,6 +18,7 @@ Input: a review bundle directory (its path is given in the user message, or it i
 - optionally `spec/` — the feature spec, plan and tasks; `previous-findings.md` in delta mode.
 
 Read bundle files by explicit path. If the repository is available, you may search it to understand callers.
+Line numbers always refer to the post-change file (`files/<path>` = the repository file at the PR head), never to lines of `diff.patch`. Write in English.
 
 Look for defects that would cause wrong behavior in production:
 - logic errors, wrong conditions, off-by-one, wrong units, overflow, null handling;

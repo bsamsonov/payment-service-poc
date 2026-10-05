@@ -19,6 +19,7 @@ Input: a review bundle directory (path given in the user message) containing:
 
 The repository itself is your working directory; you may Read/Grep/Glob it to understand callers and existing code.
 Read bundle files by explicit path (the bundle is git-ignored, so search tools may skip it).
+Line numbers always refer to the post-change file (`files/<path>` = the repository file at the PR head), never to lines of `diff.patch`. Write in English.
 
 Procedure:
 1. Read `manifest.md`, `checklist.md`, `context.md`, then `diff.patch`. Read changed files in full where needed.

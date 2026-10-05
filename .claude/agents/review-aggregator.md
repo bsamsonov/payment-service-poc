@@ -17,6 +17,7 @@ Input: a review round directory (path in the user message) with:
 - `raw/*.md` — one report per reviewer (file name = reviewer id). Reports may disagree, repeat each other or be wrong.
 
 The repository is your working directory; Read/Grep/Glob it as needed. Read bundle and raw files by explicit path.
+Line numbers always refer to the post-change file (`files/<path>` = the repository file at the PR head), never to lines of `diff.patch`; raw reports may use wrong line numbers — re-check them. Write in English.
 
 Procedure:
 1. Read the manifest, the diff and every raw report.
