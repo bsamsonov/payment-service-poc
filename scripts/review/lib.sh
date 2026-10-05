@@ -30,6 +30,7 @@ latest_reviewed_round_dir() {
   for n in $(find "$dir" -mindepth 1 -maxdepth 1 -type d -regex '.*/[0-9]+' -printf '%f\n' | sort -rn); do
     [[ -f "$dir/$n/meta.json" && -f "$dir/$n/aggregate.json" ]] && { echo "$dir/$n"; return 0; }
   done
+  return 0  # "none" is not an error: callers use $(...) under set -e
 }
 
 # Settings layer for headless Claude reviewers: no hooks, English output regardless of the user's language setting.
