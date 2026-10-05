@@ -41,7 +41,8 @@ lefthook install                              # once per clone
 | Claude Code hooks | format Java on edit; fast check when a turn ends (failures go back to the agent) |
 | Git hooks (Lefthook) | pre-commit: Spotless, gitleaks, Conventional Commits; pre-push: fast verify |
 | CI | full verify (Error Prone/NullAway, ArchUnit, JaCoCo 80%, SpotBugs/FindSecBugs), JDK 25 check, CodeQL, gitleaks, dependency review |
-| Repository rules | PRs only, required checks, resolved conversations, linear history (rebase merge) |
+| AI review (`/pr-review`) | checklist reviewer + several bug-hunting models (Claude, OpenCode) → aggregator verifies findings against the code → inline PR comments and a review guide for the human ([`scripts/review/`](scripts/review/), [checklist](docs/review-checklist.md)) |
+| Repository rules | PRs only, required checks, resolved conversations, linear history (rebase merge); [`.github/rulesets/`](.github/rulesets/) |
 | Decisions | [`docs/adr/`](docs/adr/) |
 
 Details: [ADR-0003](docs/adr/0003-development-workflow.md).
