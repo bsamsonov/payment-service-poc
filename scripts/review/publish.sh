@@ -5,14 +5,22 @@
 #   - one PR comment with guide.md.
 # Inline comments open review threads; the ruleset requires all threads to be resolved before merge.
 #
-# Usage: scripts/review/publish.sh <round-dir> [--dry-run]
+# Idempotent: each step is recorded in published.json right after it succeeds and is not repeated on a re-run
+# (e.g. after the guide comment failed); --force posts again.
+#
+# Usage: scripts/review/publish.sh <round-dir> [--dry-run | --force]
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require gh jq awk
 
 round_dir="${1:?usage: publish.sh <round-dir> [--dry-run]}"
-dry_run=false
-[[ "${2:-}" == "--dry-run" ]] && dry_run=true
+dry_run=false force=false
+case "${2:-}" in
+  --dry-run) dry_run=true ;;
+  --force)   force=true ;;
+  "")        ;;
+  *)         die "unknown option: $2" ;;
+esac
 round_dir="$(cd "$round_dir" && pwd)"
 agg="$round_dir/aggregate.json"
 [[ -f "$agg" ]] || die "no aggregate.json in $round_dir; run aggregate.sh first"
@@ -62,10 +70,25 @@ if [[ "$dry_run" == true ]]; then
 fi
 
 repo="$(gh repo view --json nameWithOwner -q .nameWithOwner)"
-if (( total > 0 )); then
+state="$round_dir/published.json"
+[[ -f "$state" && "$force" == false ]] || echo '{}' >"$state"
+record() { jq --arg k "$1" --arg v "$2" --arg at "$(date -u +%FT%TZ)" '.[$k] = {url: $v, at: $at}' "$state" >"$state.tmp" \
+  && mv "$state.tmp" "$state"; }
+
+if (( total == 0 )); then
+  log "no findings: no review posted"
+elif url="$(jq -r '.review.url // empty' "$state")" && [[ -n "$url" ]]; then
+  log "review already posted: $url (use --force to post again)"
+else
   url="$(gh api -X POST "repos/$repo/pulls/$pr/reviews" --input "$payload" -q .html_url)"
+  record review "$url"
   log "review posted: $url ($inline inline, $(( total - inline )) in body)"
 fi
-url="$(gh pr comment "$pr" --body-file "$round_dir/guide.md")"
-log "guide posted: $url"
-jq -n --arg at "$(date -u +%FT%TZ)" '{published_at: $at}' >"$round_dir/published.json"
+
+if url="$(jq -r '.guide.url // empty' "$state")" && [[ -n "$url" ]]; then
+  log "guide already posted: $url (use --force to post again)"
+else
+  url="$(gh pr comment "$pr" --body-file "$round_dir/guide.md")"
+  record guide "$url"
+  log "guide posted: $url"
+fi
