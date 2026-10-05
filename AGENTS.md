@@ -16,6 +16,7 @@ Spring Security (JWT), Testcontainers, WireMock, Maven wrapper.
 | Full check, as in CI (+ integration tests, coverage gate) | `./mvnw verify` |
 | CI-only analyzers (SpotBugs/FindSecBugs) | `./mvnw verify -Pci` |
 | Install git hooks (once per clone) | `lefthook install` |
+| AI review of a pull request | `scripts/review/pr-review.sh <pr> [--delta]` (Claude Code: `/pr-review <pr>`) |
 
 Integration tests (`*IT`) need Docker (Testcontainers).
 
@@ -68,6 +69,12 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 - Real PostgreSQL via Testcontainers — no H2. External HTTP via WireMock — no mocking of HTTP clients.
 - Test names state behavior; acceptance tests carry the AC id: `@DisplayName("AC-2: …")`.
 - Coverage gate: 80% lines (merged unit + integration).
+
+## Review
+- Every PR gets an AI review (`/pr-review`) before human review. Each finding is closed with a fix commit or a
+  reply explaining why it is not a bug; the next round reviews only new commits (`--delta`).
+- Review rules: `docs/review-checklist.md` (`RC-NN`); facts for reviewers: `docs/review-context.md` — update it
+  together with this file.
 
 ## Documentation
 - Specs: `specs/`; decisions: `docs/adr/` (MADR, never edited after acceptance — superseded by new ADRs).
