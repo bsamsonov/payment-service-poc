@@ -22,12 +22,13 @@ last_round_number() {
   find "$dir" -mindepth 1 -maxdepth 1 -type d -regex '.*/[0-9]+' -printf '%f\n' | sort -n | tail -1 | grep . || echo 0
 }
 
-# Latest complete round directory of a PR (bundle built: meta.json present), or empty.
-latest_round_dir() {
+# Latest reviewed round directory of a PR (aggregation finished: aggregate.json present), or empty.
+# Rounds that stopped earlier (no quorum, aggregation failure, Ctrl-C) are ignored, so --delta never skips commits.
+latest_reviewed_round_dir() {
   local dir="$REVIEW_ROOT/$1" n
   [[ -d "$dir" ]] || return 0
   for n in $(find "$dir" -mindepth 1 -maxdepth 1 -type d -regex '.*/[0-9]+' -printf '%f\n' | sort -rn); do
-    [[ -f "$dir/$n/meta.json" ]] && { echo "$dir/$n"; return 0; }
+    [[ -f "$dir/$n/meta.json" && -f "$dir/$n/aggregate.json" ]] && { echo "$dir/$n"; return 0; }
   done
 }
 

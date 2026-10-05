@@ -24,10 +24,10 @@ git fetch -q origin "$base_ref" "pull/$pr/head"
 git cat-file -e "$head_sha^{commit}" || die "head commit $head_sha not available after fetch"
 base_sha="$(git merge-base "origin/$base_ref" "$head_sha")"
 
-prev_dir="$(latest_round_dir "$pr")"
+prev_dir="$(latest_reviewed_round_dir "$pr")"
 diff_from="$base_sha"
 if [[ "$mode" == "delta" ]]; then
-  [[ -n "$prev_dir" && -f "$prev_dir/meta.json" ]] || die "--delta needs a previous round in .review/$pr"
+  [[ -n "$prev_dir" ]] || die "--delta needs a previous reviewed round (with aggregate.json) in .review/$pr"
   prev_head="$(jq -r .head_sha "$prev_dir/meta.json")"
   if [[ "$prev_head" == "$head_sha" ]]; then
     die "no new commits since round $(basename "$prev_dir") (${head_sha:0:7})"
