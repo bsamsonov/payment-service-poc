@@ -27,20 +27,20 @@ OPENCODE="${OPENCODE:-$(command -v opencode || echo "$HOME/.opencode/bin/opencod
 TIMEOUT="${PR_REVIEW_TIMEOUT:-1200}"
 L1=(checklist)
 L2=(bugs-opus deepseek glm code-review)
-REVIEWERS=(${PR_REVIEW_REVIEWERS:-${L1[*]} ${L2[*]}})
+read -ra REVIEWERS <<<"${PR_REVIEW_REVIEWERS:-${L1[*]} ${L2[*]}}"
 
 # Headless Claude Code with a project subagent: no MCP servers, no skills, no hooks, no saved session.
 claude_agent() {
   local agent="$1" id="$2"
-  (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude -p \
+  (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude \
+    -p "Review the bundle in \`$bundle_rel/\` (start with \`$bundle_rel/manifest.md\`). PR #$pr." \
     --agent "$agent" \
     --output-format json \
     --permission-mode dontAsk \
     --strict-mcp-config \
     --disable-slash-commands \
     --no-session-persistence \
-    --settings '{"disableAllHooks": true}' \
-    "Review the bundle in \`$bundle_rel/\` (start with \`$bundle_rel/manifest.md\`). PR #$pr.") \
+    --settings "$CLAUDE_REVIEW_SETTINGS") \
     >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err"
   jq -e '.is_error == false' "$round_dir/logs/$id.json" >/dev/null
   jq -r '.result' "$round_dir/logs/$id.json" >"$round_dir/raw/$id.md"
@@ -49,15 +49,14 @@ claude_agent() {
 # Built-in /code-review skill in headless mode, read-only git/gh access.
 claude_code_review() {
   local id="$1"
-  (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude -p \
+  (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude \
+    -p "/code-review medium $pr" \
     --output-format json \
     --permission-mode dontAsk \
     --strict-mcp-config \
     --no-session-persistence \
-    --settings '{"disableAllHooks": true}' \
-    --allowedTools "Read" "Grep" "Glob" "Bash(git diff:*)" "Bash(git log:*)" "Bash(git show:*)" \
-      "Bash(gh pr view:*)" "Bash(gh pr diff:*)" \
-    "/code-review medium $pr") \
+    --settings "$CLAUDE_REVIEW_SETTINGS" \
+    --allowedTools "Read,Grep,Glob,Bash(git diff:*),Bash(git log:*),Bash(git show:*),Bash(gh pr view:*),Bash(gh pr diff:*)") \
     >"$round_dir/logs/$id.json" 2>"$round_dir/logs/$id.err"
   jq -e '.is_error == false' "$round_dir/logs/$id.json" >/dev/null
   jq -r '.result' "$round_dir/logs/$id.json" >"$round_dir/raw/$id.md"
@@ -105,6 +104,11 @@ run_one() {
 }
 
 log "PR #$pr round $(basename "$round_dir"): running ${REVIEWERS[*]} (timeout ${TIMEOUT}s each)"
+# A re-run of the round replaces the selected reviewers' results; stale reports must not survive a failure.
+for id in "${REVIEWERS[@]}"; do
+  rm -f "$round_dir/raw/$id.md" "$round_dir/logs/$id".{json,err,status}
+done
+
 declare -A pids=()
 for id in "${REVIEWERS[@]}"; do
   ( start=$SECONDS
@@ -116,7 +120,8 @@ for id in "${!pids[@]}"; do wait "${pids[$id]}" || true; done
 
 ok=() failed=()
 for id in "${REVIEWERS[@]}"; do
-  read -r status secs <"$round_dir/logs/$id.status"
+  status=failed secs=?
+  [[ -f "$round_dir/logs/$id.status" ]] && read -r status secs <"$round_dir/logs/$id.status"
   log "  $id: $status (${secs}s)"
   if [[ "$status" == ok ]]; then ok+=("$id"); else failed+=("$id"); rm -f "$round_dir/raw/$id.md"; fi
 done
