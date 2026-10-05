@@ -1,0 +1,27 @@
+name: Feature
+description: New behavior (will get a spec in specs/)
+labels: [feature]
+body:
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: Problem and who needs it.
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: Expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria (draft)
+      placeholder: "- Given …, when …, then …"
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope

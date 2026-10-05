@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Suppressions must be justified. Keep this list short. -->
+<FindBugsFilter>
+    <!-- Spring beans and records routinely hold references to injected/immutable collaborators. -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

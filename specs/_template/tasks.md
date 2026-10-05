@@ -1,0 +1,6 @@
+# NNN. <Feature title> — tasks
+
+Each task is one commit (or a few): failing test first, then code; the build is green after each task.
+
+- [ ] T1 (AC-1) …
+- [ ] T2 (AC-2, AC-3) …
