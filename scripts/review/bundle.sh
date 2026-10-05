@@ -44,9 +44,12 @@ round_dir="$REVIEW_ROOT/$pr/$round"
 bundle="$round_dir/bundle"
 mkdir -p "$bundle/files" "$round_dir/raw" "$round_dir/logs"
 
-git diff --no-color --find-renames "$diff_from" "$head_sha" >"$bundle/diff.patch"
+# Fixed a/ b/ prefixes and no external diff tools: publish.sh parses the patch, so user diff config must not leak in.
+DIFF=(git -c diff.noprefix=false -c diff.mnemonicPrefix=false diff --no-color --no-ext-diff --find-renames
+      --src-prefix=a/ --dst-prefix=b/)
+"${DIFF[@]}" "$diff_from" "$head_sha" >"$bundle/diff.patch"
 # The full PR diff is always kept: inline comments must target lines of the PR diff, not of the delta.
-git diff --no-color --find-renames "$base_sha" "$head_sha" >"$round_dir/pr.patch"
+"${DIFF[@]}" "$base_sha" "$head_sha" >"$round_dir/pr.patch"
 
 mapfile -t changed < <(git diff --name-only --diff-filter=d --find-renames "$diff_from" "$head_sha")
 for path in "${changed[@]}"; do
