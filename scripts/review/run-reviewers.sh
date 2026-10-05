@@ -12,7 +12,7 @@
 # unless --allow-degraded (recorded in quorum.json).
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-require claude jq timeout
+require claude gh jq timeout
 
 round_dir="${1:?usage: run-reviewers.sh <round-dir> [--allow-degraded]}"
 allow_degraded=false
@@ -23,6 +23,7 @@ bundle="$round_dir/bundle"
 bundle_rel="${bundle#"$REPO_ROOT"/}"
 pr="$(jq -r .pr "$round_dir/meta.json")"
 head_sha="$(jq -r .head_sha "$round_dir/meta.json")"
+mode="$(jq -r .mode "$round_dir/meta.json")"
 
 OPENCODE="${OPENCODE:-$(command -v opencode || echo "$HOME/.opencode/bin/opencode")}"
 TIMEOUT="${PR_REVIEW_TIMEOUT:-1200}"
@@ -59,7 +60,16 @@ claude_agent() {
 # which would let a prompt-injected reviewer write files. The model is explicit: without it the
 # user's default model applies (which may be a small one).
 claude_code_review() {
-  local id="$1"
+  local id="$1" live_head
+  # /code-review takes only a PR number and reviews the live PR: it cannot follow a delta range or a pinned commit.
+  if [[ "$mode" == delta ]]; then
+    echo "skipped: /code-review cannot review a delta range" >"$round_dir/logs/$id.err"; return 10
+  fi
+  live_head="$(gh pr view "$pr" --json headRefOid -q .headRefOid)" || return 1
+  if [[ "$live_head" != "$head_sha" ]]; then
+    echo "skipped: PR head moved to ${live_head:0:7} since the bundle (${head_sha:0:7})" >"$round_dir/logs/$id.err"
+    return 10
+  fi
   (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude \
     -p "/code-review medium $pr" \
     --model "${PR_REVIEW_CODE_REVIEW_MODEL:-opus}" \
@@ -138,7 +148,8 @@ declare -A pids=()
 for id in "${REVIEWERS[@]}"; do
   ( start=$SECONDS rc=0
     run_one "$id" || rc=$?
-    if [[ $rc -ne 0 ]]; then status=failed
+    if [[ $rc -eq 10 ]]; then status=skipped rc=0
+    elif [[ $rc -ne 0 ]]; then status=failed
     elif ! [[ -s "$round_dir/raw/$id.md" ]]; then status=failed rc=empty
     elif ! report_complete "$id"; then status=failed rc=incomplete
     else status=ok; fi
@@ -151,14 +162,18 @@ for id in "${REVIEWERS[@]}"; do
   status=failed secs=? rc=?
   [[ -f "$round_dir/logs/$id.status" ]] && read -r status secs rc <"$round_dir/logs/$id.status"
   log "  $id: $status (${secs}s, exit $rc)"
-  [[ "$status" == ok ]] || rm -f "$round_dir/raw/$id.md"
+  [[ "$status" == ok ]] || rm -f "$round_dir/raw/$id.md"  # failed or skipped
 done
 
 # Quorum over every reviewer of the round, so that re-running a subset keeps earlier successful results.
 ok=() failed=()
 for f in "$round_dir"/logs/*.status; do
   id="$(basename "$f" .status)"
-  if [[ "$(cut -d' ' -f1 "$f")" == ok ]]; then ok+=("$id"); else failed+=("$id"); fi
+  case "$(cut -d' ' -f1 "$f")" in
+    ok)      ok+=("$id") ;;
+    skipped) ;;  # neither helps nor hurts the quorum
+    *)       failed+=("$id") ;;
+  esac
 done
 
 l1_ok=false l2_ok=0
