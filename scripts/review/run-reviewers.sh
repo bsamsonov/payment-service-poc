@@ -6,6 +6,7 @@
 # Usage: scripts/review/run-reviewers.sh <round-dir> [--allow-degraded]
 # Env:   PR_REVIEW_REVIEWERS  space-separated subset (default: all)
 #        PR_REVIEW_TIMEOUT    per-reviewer timeout, seconds (default: 1200)
+#        PR_REVIEW_CODE_REVIEW_MODEL  model for the built-in /code-review (default: opus)
 #
 # Quorum: L1 (checklist) must succeed and at least one L2 reviewer must succeed; otherwise exit 3
 # unless --allow-degraded (recorded in quorum.json).
@@ -46,11 +47,13 @@ claude_agent() {
   jq -r '.result' "$round_dir/logs/$id.json" >"$round_dir/raw/$id.md"
 }
 
-# Built-in /code-review skill in headless mode, read-only git/gh access.
+# Built-in /code-review skill in headless mode, read-only git/gh access. The model is explicit: without it the
+# user's default model applies (which may be a small one).
 claude_code_review() {
   local id="$1"
   (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude \
     -p "/code-review medium $pr" \
+    --model "${PR_REVIEW_CODE_REVIEW_MODEL:-opus}" \
     --output-format json \
     --permission-mode dontAsk \
     --strict-mcp-config \
