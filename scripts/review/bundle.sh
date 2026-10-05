@@ -80,13 +80,18 @@ if [[ -n "$spec_id" ]]; then
 fi
 
 if [[ "$mode" == "delta" ]]; then
-  if [[ -f "$prev_dir/aggregate.json" ]]; then
-    jq -r '"# Findings of the previous round\n",
-      (.findings[] | "## \(.id) — \(.title)\n- location: `\(.path):\(.line)`\n- severity: \(.severity)\n\n\(.body)\n")' \
-      "$prev_dir/aggregate.json" >"$bundle/previous-findings.md"
+  # Open findings of all earlier rounds (open-findings.json is maintained by aggregate.sh). Rounds aggregated before
+  # it existed fall back to their own findings.
+  if [[ -f "$prev_dir/open-findings.json" ]]; then
+    cp "$prev_dir/open-findings.json" "$bundle/previous-findings.json"
   else
-    log "previous round has no aggregate.json; delta runs without previous findings"
+    jq --arg r "R$(basename "$prev_dir")-" '[.findings[] | {id: ($r + .id), title, severity, path, line, body}]' \
+      "$prev_dir/aggregate.json" >"$bundle/previous-findings.json"
   fi
+  jq -r '"# Open findings of previous rounds\n",
+    "Report the status of each id in `previous`.\n",
+    (.[] | "## \(.id) — \(.title)\n- location: `\(.path):\(.line)` (at the time it was reported)\n- severity: \(.severity)\n\n\(.body)\n")' \
+    "$bundle/previous-findings.json" >"$bundle/previous-findings.md"
 fi
 
 jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \

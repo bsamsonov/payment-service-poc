@@ -54,6 +54,15 @@ jq -e 'has("summary") and has("findings") and has("rejected") and has("must_revi
   "$round_dir/aggregate.json" >/dev/null || die "aggregator JSON misses required fields, see $round_rel/aggregate.json"
 agg="$round_dir/aggregate.json"
 
+# Open findings after this round: earlier open findings not reported as fixed + this round's findings (ids R<n>-Fk).
+prev_open='[]'
+[[ -f "$round_dir/bundle/previous-findings.json" ]] && prev_open="$(cat "$round_dir/bundle/previous-findings.json")"
+jq --arg r "R$round-" --argjson prev "$prev_open" '
+  (.previous | map({key: .id, value: .status}) | from_entries) as $status
+  | [$prev[] | select(($status[.id] // "not_fixed") != "fixed")]
+    + [.findings[] | {id: ($r + .id), title, severity, path, line, body}]
+' "$agg" >"$round_dir/open-findings.json"
+
 # Per-reviewer stats: raw findings as counted by the aggregator, confirmed = findings listing the reviewer.
 jq -r --arg pr "$pr" --arg round "$round" '
   . as $a | ($a.reviewers // [])[]
