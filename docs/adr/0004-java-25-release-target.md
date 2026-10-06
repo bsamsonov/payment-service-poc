@@ -21,8 +21,6 @@ Option 2: **Java 25** release target, built and tested in CI on Temurin 25.
 - The code may use Java 22–25 features (e.g. unnamed variables `_`, flexible constructor bodies, module imports,
   `Stream.gather`, scoped values) where they make the code clearer, once the formatter and analyzers accept them —
   the fast check fails otherwise, and the feature waits for a tool update.
-- The build requires JDK 25 or newer (Maven Enforcer `requireJavaVersion`), so an older JDK fails at the start
-  with a clear message instead of a late compiler error or a stale incremental build.
 - The CI build job gets a version-neutral name (`Build and test`), so the next JDK upgrade does not require changing
   the required status checks of the `main` ruleset again.
 - The separate JDK 25 compatibility job is removed: it becomes the main build. A forward-compatibility job for the next
