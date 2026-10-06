@@ -1,6 +1,6 @@
 # 0002. Technology stack
 
-- Status: Accepted
+- Status: Accepted; Java version decision superseded by [0004](0004-java-25-release-target.md)
 - Date: 2026-10-02
 
 ## Context and problem
