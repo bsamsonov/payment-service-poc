@@ -48,6 +48,9 @@ jq -e '.is_error == false' "$round_dir/logs/aggregator.json" >/dev/null \
 # aggregate.json marks the round as reviewed (delta rounds start from it), so it appears only after validation;
 # a failed re-aggregation keeps the previous valid file (mv replaces it atomically).
 tmp="$round_dir/aggregate.json.tmp"
+jq -e '(.structured_output | type) == "object"' "$round_dir/logs/aggregator.json" >/dev/null \
+  || log "WARNING: no structured output, the schema was not applied (is StructuredOutput in the agent's tools?);" \
+       "parsing the text result"
 jq 'if (.structured_output | type) == "object" then .structured_output
     else .result | sub("^[^{]*"; "") | sub("[^}]*$"; "") | fromjson end' \
   "$round_dir/logs/aggregator.json" >"$tmp" 2>/dev/null \
