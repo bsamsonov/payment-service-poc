@@ -119,10 +119,11 @@ JSON
 # A report counts only if it has the structure its prompt requires; a truncated or chatty answer does not.
 report_complete() {
   local id="$1" f="$round_dir/raw/$1.md"
+  [[ -s "$f" ]] || return 1
   case "$id" in
     checklist)               grep -q '^# L1 checklist review' "$f" && grep -qE '^\| *RC-[0-9]+' "$f" ;;
     bugs-opus|deepseek|glm)  grep -q '^# L2 bug review' "$f" && grep -q '^## Findings' "$f" ;;
-    *)                       [[ -s "$f" ]] ;;  # /code-review has a free-form answer
+    *)                       ;;  # /code-review has a free-form answer
   esac
 }
 
@@ -166,11 +167,13 @@ for id in "${REVIEWERS[@]}"; do
 done
 
 # Quorum over every reviewer of the round, so that re-running a subset keeps earlier successful results.
+# An `ok` status counts only while its report is still present and complete (it may have been removed since).
 ok=() failed=()
 for f in "$round_dir"/logs/*.status; do
   id="$(basename "$f" .status)"
   case "$(cut -d' ' -f1 "$f")" in
-    ok)      ok+=("$id") ;;
+    ok)      if report_complete "$id"; then ok+=("$id")
+             else log "  $id: status ok but raw/$id.md is missing or incomplete — counted as failed"; failed+=("$id"); fi ;;
     skipped) ;;  # neither helps nor hurts the quorum
     *)       failed+=("$id") ;;
   esac
