@@ -10,15 +10,15 @@ quality gates and multi-layer code review.
 **Status:** project bootstrap — build, quality gates, CI and workflow are in place; features follow as specs in `specs/`.
 
 ## Stack
-Java 21 (release target, CI also checks JDK 25) · Spring Boot 4.1 · Spring MVC · PostgreSQL · Flyway · JPA/Hibernate ·
-Resilience4j · Spring Security (JWT) · Testcontainers · WireMock · Maven. Rationale: [ADR-0002](docs/adr/0002-technology-stack.md).
+Java 25 · Spring Boot 4.1 · Spring MVC · PostgreSQL · Flyway · JPA/Hibernate ·
+Resilience4j · Spring Security (JWT) · Testcontainers · WireMock · Maven. Rationale: [ADR-0002](docs/adr/0002-technology-stack.md), [ADR-0004](docs/adr/0004-java-25-release-target.md) (Java 25).
 
 ## Getting started
 Prerequisites — install these yourself; Maven, all Maven plugins and analyzers come via `./mvnw`:
 
 | Tool | Needed for | Install |
 |---|---|---|
-| JDK 21+ | build, run | any distribution, e.g. [Temurin](https://adoptium.net) or `sdk install java 21-tem` |
+| JDK 25+ | build, run | any distribution, e.g. [Temurin](https://adoptium.net), `sdk install java 25-tem` or `apt install openjdk-25-jdk` |
 | Docker | integration tests (Testcontainers) | [Docker Engine](https://docs.docker.com/engine/install/) |
 | [Lefthook](https://lefthook.dev) | local git hooks | `brew install lefthook`, or a binary from [releases](https://github.com/evilmartians/lefthook/releases) into your `PATH` |
 | [gitleaks](https://github.com/gitleaks/gitleaks) | pre-commit secrets scan | `brew install gitleaks`, or a binary from [releases](https://github.com/gitleaks/gitleaks/releases) into your `PATH` |
@@ -40,7 +40,7 @@ lefthook install                              # once per clone
 | Agent rules | [`AGENTS.md`](AGENTS.md) (all agents), [`CLAUDE.md`](CLAUDE.md) (Claude Code) |
 | Claude Code hooks | format Java on edit; fast check when a turn ends (failures go back to the agent) |
 | Git hooks (Lefthook) | pre-commit: Spotless, gitleaks, Conventional Commits; pre-push: fast verify |
-| CI | full verify (Error Prone/NullAway, ArchUnit, JaCoCo 80%, SpotBugs/FindSecBugs), JDK 25 check, CodeQL, gitleaks, dependency review |
+| CI | full verify (Error Prone/NullAway, ArchUnit, JaCoCo 80%, SpotBugs/FindSecBugs) on JDK 25, CodeQL, gitleaks, dependency review |
 | AI review (`/pr-review`) | checklist reviewer + several bug-hunting models (Claude, OpenCode) → aggregator verifies findings against the code → inline PR comments and a review guide for the human ([`scripts/review/`](scripts/review/), [checklist](docs/review-checklist.md)) |
 | Repository rules | PRs only, required checks, resolved conversations, linear history (rebase merge); [`.github/rulesets/`](.github/rulesets/) |
 | Decisions | [`docs/adr/`](docs/adr/) |
