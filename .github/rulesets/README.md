@@ -5,7 +5,7 @@ repository, applied manually by the repository owner.
 
 | File | Ruleset |
 |---|---|
-| `main.json` | Protects the default branch: no deletion or force push, linear history, PR with resolved conversations, rebase-only merge, required checks (`Build and test (JDK 21)`, `Secrets scan (gitleaks)`, `Analyze (java-kotlin)`), no new CodeQL high+ security alerts or errors. |
+| `main.json` | Protects the default branch: no deletion or force push, linear history, PR with resolved conversations, rebase-only merge, required checks (`Build and test`, `Secrets scan (gitleaks)`, `Analyze (java-kotlin)`), no new CodeQL high+ security alerts or errors. |
 
 ## Apply
 

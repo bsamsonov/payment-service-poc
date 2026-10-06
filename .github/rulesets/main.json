@@ -28,7 +28,7 @@
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "Build and test (JDK 21)" },
+          { "context": "Build and test" },
           { "context": "Secrets scan (gitleaks)" },
           { "context": "Analyze (java-kotlin)" }
         ]
