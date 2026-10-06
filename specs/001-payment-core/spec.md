@@ -1,7 +1,7 @@
 ---
 id: 001
 title: Payment core
-status: Draft  # Draft | Approved | Implemented | Superseded
+status: Approved  # Draft | Approved | Implemented | Superseded
 issue: "—"
 ---
 
@@ -161,5 +161,4 @@ New `api/openapi.yaml`:
   SQLSTATE `42501`. The JPA entities are `@Immutable`; the repositories have no delete methods.
 
 ## Open questions
-1. Retention of `rejected_requests`: it grows with every bad request (and with `401/403` in 004). Recommendation: no
-   cleanup in v1; revisit together with the idempotency cleanup job.
+None. Resolved: `rejected_requests` has no cleanup in v1; revisit with the idempotency cleanup job.
