@@ -7,9 +7,9 @@
 ## Context and problem
 ADR-0002 chose Java 21 as the release target, as the common enterprise LTS baseline, and added a CI job building on
 JDK 25 to keep the move to 25 a toolchain change. Java 25 has been an LTS release since September 2025, Spring Boot 4.1
-and every tool in our quality gates (Error Prone/NullAway, SpotBugs, JaCoCo, Spotless) run on it, and the JDK 25
-compatibility job is green on `main`. The project is a greenfield service with no consumers
-pinned to an older runtime.
+and every tool in our quality gates (Error Prone/NullAway, SpotBugs, JaCoCo, Spotless) run on it: the full CI build
+(`verify -Pci`) passes on JDK 25 with `--release 25`. The project is a greenfield service with no consumers pinned to
+an older runtime.
 
 ## Considered options
 1. Keep `--release 21`, build on JDK 25 (toolchain-only change).
@@ -19,7 +19,10 @@ pinned to an older runtime.
 Option 2: **Java 25** release target, built and tested in CI on Temurin 25.
 
 - The code may use Java 22–25 features (e.g. unnamed variables `_`, flexible constructor bodies, module imports,
-  `Stream.gather`, scoped values) where they make the code clearer.
+  `Stream.gather`, scoped values) where they make the code clearer, once the formatter and analyzers accept them —
+  the fast check fails otherwise, and the feature waits for a tool update.
+- The build requires JDK 25 or newer (Maven Enforcer `requireJavaVersion`), so an older JDK fails at the start
+  with a clear message instead of a late compiler error or a stale incremental build.
 - The CI build job gets a version-neutral name (`Build and test`), so the next JDK upgrade does not require changing
   the required status checks of the `main` ruleset again.
 - The separate JDK 25 compatibility job is removed: it becomes the main build. A forward-compatibility job for the next
