@@ -1,7 +1,8 @@
 # 0002. Technology stack
 
-- Status: Accepted; Java version decision superseded by [0004](0004-java-25-release-target.md)
+- Status: Accepted
 - Date: 2026-10-02
+- Amended by: [0004](0004-java-25-release-target.md) — Java release target 21 → 25
 
 ## Context and problem
 We need a stack for an internal payment service that matches common enterprise Java practice, is currently supported,
