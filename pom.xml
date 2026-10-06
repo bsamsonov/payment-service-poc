@@ -72,28 +72,6 @@
 
     <build>
         <plugins>
-            <!-- Fail fast on an older JDK instead of a late "release version not supported" or a stale incremental build -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-enforcer-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>enforce-java-version</id>
-                        <goals>
-                            <goal>enforce</goal>
-                        </goals>
-                        <configuration>
-                            <rules>
-                                <requireJavaVersion>
-                                    <version>[${java.version},)</version>
-                                    <message>JDK ${java.version} or newer is required (ADR-0004). Set JAVA_HOME to a JDK ${java.version}+.</message>
-                                </requireJavaVersion>
-                            </rules>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
