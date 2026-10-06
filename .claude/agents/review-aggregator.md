@@ -1,7 +1,7 @@
 ---
 name: review-aggregator
 description: Aggregator for /pr-review. Deduplicates and verifies raw reviewer findings against the code and writes the human review guide. Read-only. Invoked by scripts/review, not for ad-hoc use.
-tools: Read, Grep, Glob
+tools: Read, Grep, Glob, StructuredOutput
 disallowedTools: mcp__*, Skill, Agent, Bash, Write, Edit, NotebookEdit, WebFetch, WebSearch
 model: opus
 effort: high
