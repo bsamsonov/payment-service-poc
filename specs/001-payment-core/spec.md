@@ -110,12 +110,12 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
 - **AC-15** Given any provider call, then each attempt is journaled as a `PROVIDER_ATTEMPT` event with `attempt_no`,
   `outcome`, `provider_http_status`, `provider_code`, `provider_request_id` and `provider_duration_ms`, in the same
   transaction as the resulting status change.
+- **AC-16** Given a request with a valid `traceparent`, then the journal rows carry its trace id and the response
+  `traceparent` continues that trace; given none (or an invalid one), a new trace is started and returned.
 - **AC-17** Given a created payment, then the payment and its `PAYMENT_CREATED` event carry `request_hash`: SHA-256 of
   the canonical request (all request fields, keys sorted, no insignificant whitespace). Requests differing only in key
   order or whitespace have the same hash; a different value in any field gives a different hash. (Used by 002 to
   detect "same `Idempotency-Key`, different request" → `422`.)
-- **AC-16** Given a request with a valid `traceparent`, then the journal rows carry its trace id and the response
-  `traceparent` continues that trace; given none (or an invalid one), a new trace is started and returned.
 
 ## Errors
 | Situation | HTTP status | Problem `type` |
@@ -159,8 +159,8 @@ New `api/openapi.yaml`:
   `to_status` (null for `PROVIDER_ATTEMPT`), `actor_type`
   (`CLIENT`, `PROVIDER`, `SYSTEM`, `OPERATOR`), `actor_id` (null until 004), `source` (`API`, `PROVIDER_RESPONSE`,
   `WEBHOOK`, `RECONCILER`, `REFUND`), `reason_code`, `provider_code`, snapshot `amount`/`currency`/`refunded_amount`,
-  `trace_id`, `idempotency_key` (null until 002), `request_hash` (on `PAYMENT_CREATED`), `provider_event_id` (005); for `PROVIDER_ATTEMPT`: `attempt_no`,
-  `outcome`, `provider_http_status`, `provider_code`, `provider_request_id`, `provider_duration_ms`; `occurred_at`,
+  `trace_id`, `idempotency_key` (null until 002), `request_hash` (on `PAYMENT_CREATED`), `provider_event_id` (005);
+  for `PROVIDER_ATTEMPT`: `attempt_no`, `outcome`, `provider_http_status`, `provider_request_id`, `provider_duration_ms`; `occurred_at`,
   `recorded_at`, `details jsonb`. No card data, `description`, `metadata` or request bodies.
 - `rejected_requests` (requests rejected before a payment exists; in 004 also `401/403`): `id uuid` PK, `trace_id`,
   `actor_type`, `actor_id` (null until 004), `http_method`, `path`, `http_status`, `problem_type`, `error_fields`
