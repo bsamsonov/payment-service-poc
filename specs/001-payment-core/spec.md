@@ -95,7 +95,9 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
   most 20 of them, newest first; no match → `200 []`; parameter missing → `400`.
 - **AC-10** Given a payment in a status, when a transition that is not forward (backward, or out of a terminal state) is
   applied, then the status is unchanged, no error is raised to the caller, and an event `TRANSITION_REJECTED` is
-  recorded. Applying the current status again is a no-op without an event.
+  recorded. Applying the current status again with identical data is a no-op without an event; with different data
+  (e.g. another failure code) the payment is unchanged and `TRANSITION_REJECTED` is recorded with
+  `reason_code=conflicting_duplicate` and both values in `details`.
 - **AC-11** Given any status change, then exactly one `payment_events` row is written in the same transaction, with
   consecutive `sequence_no` per payment and a snapshot of `status`, `amount`, `currency`, `refunded_amount`; if the
   event insert fails, the status change is rolled back.
@@ -108,6 +110,10 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
 - **AC-15** Given any provider call, then each attempt is journaled as a `PROVIDER_ATTEMPT` event with `attempt_no`,
   `outcome`, `provider_http_status`, `provider_code`, `provider_request_id` and `provider_duration_ms`, in the same
   transaction as the resulting status change.
+- **AC-17** Given a created payment, then the payment and its `PAYMENT_CREATED` event carry `request_hash`: SHA-256 of
+  the canonical request (all request fields, keys sorted, no insignificant whitespace). Requests differing only in key
+  order or whitespace have the same hash; a different value in any field gives a different hash. (Used by 002 to
+  detect "same `Idempotency-Key`, different request" → `422`.)
 - **AC-16** Given a request with a valid `traceparent`, then the journal rows carry its trace id and the response
   `traceparent` continues that trace; given none (or an invalid one), a new trace is started and returned.
 
@@ -145,13 +151,15 @@ New `api/openapi.yaml`:
 ## Data changes
 - `payments`: `id uuid` PK, `amount bigint` (> 0), `currency char(3)`, `payment_method_id`, `external_reference`
   (indexed with `created_at`), `description`, `metadata jsonb`, `status`, `refunded_amount bigint` (0 ≤ x ≤ amount),
-  `failure_code`, `created_at`, `updated_at` (Spring Data auditing), `version` (optimistic lock).
+  `failure_code`, `request_hash` (AC-17), `last_event_seq` (counter for `payment_events.sequence_no`; every event bumps
+  it, so all journal writes of one payment are serialized by the optimistic lock), `created_at`, `updated_at` (Spring
+  Data auditing), `version` (optimistic lock).
 - `payment_events`: `id uuid` PK (UUIDv7), `payment_id` FK **without cascade**, `sequence_no` (unique per payment),
   `event_type` (`PAYMENT_CREATED`, `STATUS_CHANGED`, `TRANSITION_REJECTED`, `PROVIDER_ATTEMPT`), `from_status`,
   `to_status` (null for `PROVIDER_ATTEMPT`), `actor_type`
   (`CLIENT`, `PROVIDER`, `SYSTEM`, `OPERATOR`), `actor_id` (null until 004), `source` (`API`, `PROVIDER_RESPONSE`,
   `WEBHOOK`, `RECONCILER`, `REFUND`), `reason_code`, `provider_code`, snapshot `amount`/`currency`/`refunded_amount`,
-  `trace_id`, `idempotency_key` (null until 002), `provider_event_id` (005); for `PROVIDER_ATTEMPT`: `attempt_no`,
+  `trace_id`, `idempotency_key` (null until 002), `request_hash` (on `PAYMENT_CREATED`), `provider_event_id` (005); for `PROVIDER_ATTEMPT`: `attempt_no`,
   `outcome`, `provider_http_status`, `provider_code`, `provider_request_id`, `provider_duration_ms`; `occurred_at`,
   `recorded_at`, `details jsonb`. No card data, `description`, `metadata` or request bodies.
 - `rejected_requests` (requests rejected before a payment exists; in 004 also `401/403`): `id uuid` PK, `trace_id`,
@@ -161,4 +169,4 @@ New `api/openapi.yaml`:
   SQLSTATE `42501`. The JPA entities are `@Immutable`; the repositories have no delete methods.
 
 ## Open questions
-None. Resolved: `rejected_requests` has no cleanup in v1; revisit with the idempotency cleanup job.
+None. Resolved: `rejected_requests` has no cleanup in v1; retention is tracked in #10.
