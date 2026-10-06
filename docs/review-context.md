@@ -7,7 +7,7 @@ ADRs; when they disagree, `AGENTS.md` wins and this file is fixed in the same PR
 ## What the service is
 Internal payment service (proof of concept). Internal services (`order-service` with full rights, `reporting-service`
 read-only) call our REST API with JWTs; we charge cards through Stripe (test mode) with our own HTTP adapter, no SDK.
-Java 21, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resilience4j, Spring Security.
+Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resilience4j, Spring Security.
 
 ## Architecture
 - Hexagonal, root package `io.github.bsamsonov.paymentservice`:

@@ -5,7 +5,7 @@ This file is the single source of project rules for every coding agent (Claude C
 
 ## Project
 Proof-of-concept internal payment service: internal services call our REST API; we charge via Stripe (test mode).
-Stack: Java 21 (release target), Spring Boot 4.1, Spring MVC, PostgreSQL + Flyway, JPA/Hibernate, Resilience4j,
+Stack: Java 25 (release target), Spring Boot 4.1, Spring MVC, PostgreSQL + Flyway, JPA/Hibernate, Resilience4j,
 Spring Security (JWT), Testcontainers, WireMock, Maven wrapper.
 
 ## Commands
