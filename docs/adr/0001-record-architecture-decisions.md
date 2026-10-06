@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-02
+- Amended by: [0005](0005-amending-adrs.md) — partial changes via amendments
 
 ## Context and problem
 Decisions made during development (often with AI assistance) are easily lost in chat history. Reviewers and future
