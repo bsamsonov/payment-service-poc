@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-06
-- Supersedes: the Java version decision of [0002](0002-technology-stack.md) (the rest of 0002 stays in force)
+- Amends: [0002](0002-technology-stack.md) — Java version decision
 
 ## Context and problem
 ADR-0002 chose Java 21 as the release target, as the common enterprise LTS baseline, and added a CI job building on
