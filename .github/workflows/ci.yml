@@ -19,6 +19,10 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      - name: Test the AC traceability check
+        run: scripts/spec/test-check-ac-trace.sh
+      - name: Check AC-to-test traceability (specs/ ↔ @DisplayName)
+        run: scripts/spec/check-ac-trace.sh
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
