@@ -4,6 +4,14 @@ spring:
   threads:
     virtual:
       enabled: true
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; a mismatch with the entities fails startup
+      ddl-auto: validate
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
 
 server:
   shutdown: graceful

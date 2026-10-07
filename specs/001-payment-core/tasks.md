@@ -3,7 +3,7 @@
 Each task is one commit (or a few): failing test first, then code; the build is green after each task.
 Tests that cover an AC carry `@DisplayName("001/AC-n: …")`. T1–T3 come first because they retire the plan's risks.
 
-- [ ] T1 (setup) Dependencies and test infrastructure: JPA, Flyway + `flyway-database-postgresql`, `postgresql`,
+- [x] T1 (setup) Dependencies and test infrastructure: JPA, Flyway + `flyway-database-postgresql`, `postgresql`,
   tracing (verify the Boot 4 artifact set; export off), `uuid-creator`, Testcontainers; `compose.yaml` +
   `spring-boot-docker-compose` (dev); shared `@TestConfiguration` with `@ServiceConnection` `postgres:17`;
   `spring.jpa.hibernate.ddl-auto=validate`, `fail-on-unknown-properties: true`.
