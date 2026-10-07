@@ -2,9 +2,9 @@
 <!-- 2–5 lines. Link the issue: Closes #… -->
 
 ## Spec
-<!-- specs/NNN-name/spec.md, or "n/a" for fix/chore -->
-- [ ] AC-1
-- [ ] AC-2
+<!-- specs/NNN-name/spec.md, or "n/a" for fix/chore. The last commit of a feature PR sets status: Implemented. -->
+- [ ] NNN/AC-1
+- [ ] NNN/AC-2
 
 ## How it was verified
 <!-- tests added/changed, manual checks (curl, logs), screenshots -->

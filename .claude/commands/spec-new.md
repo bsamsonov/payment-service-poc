@@ -9,4 +9,4 @@ Create `specs/$1/spec.md` from `specs/_template/spec.md` for: $ARGUMENTS
    scope, non-goals, edge cases, errors, idempotency, security, audit and data. Wait for my answers.
 3. Draft `spec.md` with status `Draft`: numbered acceptance criteria in Given/When/Then, an errors table and explicit
    non-goals. Put anything still undecided under "Open questions" — do not guess.
-4. Keep it to 1–2 pages. Commit the draft (`docs(spec): draft NNN …`) and show me the open questions.
+4. Keep it to what fits in one pull request (split otherwise). Commit the draft (`docs(spec): draft NNN …`) and show me the open questions.

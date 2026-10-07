@@ -16,6 +16,7 @@ Spring Security (JWT), Testcontainers, WireMock, Maven wrapper.
 | Full check, as in CI (+ integration tests, coverage gate) | `./mvnw verify` |
 | CI-only analyzers (SpotBugs/FindSecBugs) | `./mvnw verify -Pci` |
 | Install git hooks (once per clone) | `lefthook install` |
+| AC-to-test traceability (also in CI) | `scripts/spec/check-ac-trace.sh` |
 | AI review of a pull request | `scripts/review/pr-review.sh <pr> [--delta]` (Claude Code: `/pr-review <pr>`) |
 
 Integration tests (`*IT`) need Docker (Testcontainers).
@@ -28,6 +29,9 @@ Integration tests (`*IT`) need Docker (Testcontainers).
    or documentation change. Each commit compiles and its tests pass, so any commit is a safe rollback point.
    This applies to documentation too. Never batch a day of work into one commit.
 4. If implementation needs different behavior than the spec, update the spec first, in the same PR, explicitly.
+   A significant change (an AC, error, API, data model, scope) returns an `Approved` spec to `Draft`; only the owner
+   sets `Approved`. After the feature PR merges the spec is frozen; later changes go to a new spec
+   (`specs/README.md`, Lifecycle).
 5. Do not implement anything listed under a spec's non-goals. Do not guess answers to open questions — ask.
 
 ## Git
@@ -67,7 +71,8 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 ## Testing
 - Unit tests `*Test` (no Spring context where possible), integration tests `*IT`.
 - Real PostgreSQL via Testcontainers — no H2. External HTTP via WireMock — no mocking of HTTP clients.
-- Test names state behavior; acceptance tests carry the AC id: `@DisplayName("AC-2: …")`.
+- Test names state behavior; acceptance tests carry the spec-qualified AC id: `@DisplayName("001/AC-2: …")`.
+  `scripts/spec/check-ac-trace.sh` (in CI) checks the ids against `specs/`.
 - Coverage gate: 80% lines (merged unit + integration).
 
 ## Review
