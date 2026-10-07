@@ -30,7 +30,7 @@ Integration tests (`*IT`) need Docker (Testcontainers).
    This applies to documentation too. Never batch a day of work into one commit.
 4. If implementation needs different behavior than the spec, update the spec first, in the same PR, explicitly.
    A significant change (an AC, error, API, data model, scope) returns an `Approved` spec to `Draft`; only the owner
-   sets `Approved`. After the feature PR merges the spec is frozen; later changes go to a new spec
+   sets `Approved`. After the feature's last PR merges the spec is frozen; later changes go to a new spec
    (`specs/README.md`, Lifecycle).
 5. Do not implement anything listed under a spec's non-goals. Do not guess answers to open questions — ask.
 

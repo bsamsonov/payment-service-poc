@@ -8,17 +8,19 @@ One folder per feature: `specs/NNN-short-name/` with three short files.
 | `plan.md` | **How**: components, data model and migrations, sequence, transactions/concurrency, test strategy per AC, risks, ADR links | AI drafts in plan mode, human reviews |
 | `tasks.md` | **Steps**: ordered, commit-sized tasks, each mapped to ACs | AI |
 
-A spec covers what fits in one pull request; split features that need more.
+A spec covers one coherent feature; split features that are not. A spec ships in **one or more pull requests**:
+`tasks.md` groups the tasks into PRs (`## PR A — …`), each about 600 changed lines of non-generated code at most
+(including tests), green and meaningful on its own. Small PRs keep human and AI review effective.
 
 ## Lifecycle
 `Draft → Approved → Implemented` (→ `Superseded`). Only the owner sets `Approved`; agents never do.
 
-- **Until the feature PR merges, the spec is living.** Edit the body directly; the reason goes in the commit
+- **Until the feature's last PR merges, the spec is living.** Edit the body directly; the reason goes in the commit
   message or PR description, not in a changelog section. Open questions are removed once answered.
   A **significant** change to an `Approved` spec — anything that changes observable behavior or a testable
   criterion: an AC, an error, the API, the data model, scope or non-goals — returns it to `Draft` until the owner
   approves it again (a separate commit). Wording fixes and clarifications keep the status.
-- **The last commit of the feature PR sets `Implemented`.** From then on the body is frozen: it records intent.
+- **The last commit of the feature's last PR sets `Implemented`.** From then on the body is frozen: it records intent.
   The living truth is `api/openapi.yaml`, acceptance tests, `docs/architecture.md` and the code.
   Allowed edits to a frozen spec: typos and back-links (below).
 - **Behavior changes after that go to a new spec**, with `supersedes`/`amends` in its front matter and a section

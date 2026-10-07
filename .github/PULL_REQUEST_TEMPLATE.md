@@ -2,7 +2,8 @@
 <!-- 2–5 lines. Link the issue: Closes #… -->
 
 ## Spec
-<!-- specs/NNN-name/spec.md, or "n/a" for fix/chore. The last commit of a feature PR sets status: Implemented. -->
+<!-- specs/NNN-name/spec.md and the PR group from tasks.md (e.g. "PR A of 4: T1–T3"), or "n/a" for fix/chore.
+     List the ACs covered by this PR. The last commit of the feature's last PR sets status: Implemented. -->
 - [ ] NNN/AC-1
 - [ ] NNN/AC-2
 
