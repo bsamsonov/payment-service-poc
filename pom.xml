@@ -29,6 +29,7 @@
         <spotbugs-maven-plugin.version>4.10.4.1</spotbugs-maven-plugin.version>
         <findsecbugs.version>1.14.0</findsecbugs.version>
         <uuid-creator.version>6.1.1</uuid-creator.version>
+        <openapi-generator.version>7.26.0</openapi-generator.version>
         <jacoco.minimum.line.coverage>0.80</jacoco.minimum.line.coverage>
         <!-- Set by JaCoCo; empty default keeps @{argLine} valid when JaCoCo is skipped -->
         <argLine/>
@@ -137,6 +138,48 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
+            <!-- Contract-first (ADR-0006): API interface and DTOs generated from api/openapi.yaml -->
+            <plugin>
+                <groupId>org.openapitools</groupId>
+                <artifactId>openapi-generator-maven-plugin</artifactId>
+                <version>${openapi-generator.version}</version>
+                <executions>
+                    <execution>
+                        <id>payments-api</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/api/openapi.yaml</inputSpec>
+                            <generatorName>spring</generatorName>
+                            <apiPackage>io.github.bsamsonov.paymentservice.adapter.in.web.api</apiPackage>
+                            <modelPackage>io.github.bsamsonov.paymentservice.adapter.in.web.model</modelPackage>
+                            <generateSupportingFiles>false</generateSupportingFiles>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <generateApiDocumentation>false</generateApiDocumentation>
+                            <generateModelDocumentation>false</generateModelDocumentation>
+                            <configOptions>
+                                <interfaceOnly>true</interfaceOnly>
+                                <useSpringBoot4>true</useSpringBoot4>
+                                <useJackson3>true</useJackson3>
+                                <useBeanValidation>true</useBeanValidation>
+                                <openApiNullable>false</openApiNullable>
+                                <skipDefaultInterface>true</skipDefaultInterface>
+                                <useTags>true</useTags>
+                                <generateJsonIncludeAnnotations>true</generateJsonIncludeAnnotations>
+                                <generateJsonSetterNullsAnnotations>false</generateJsonSetterNullsAnnotations>
+                                <!-- Absent optional collections stay null and are omitted (spec 001: absent fields omitted) -->
+                                <containerDefaultToNull>true</containerDefaultToNull>
+                                <!-- No springdoc/swagger annotations in generated code -->
+                                <documentationProvider>none</documentationProvider>
+                                <annotationLibrary>none</annotationLibrary>
+                            </configOptions>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
             <!-- Static analysis at compile time: Error Prone + NullAway (JSpecify, @NullMarked packages) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -146,7 +189,7 @@
                         <arg>-XDcompilePolicy=simple</arg>
                         <arg>-XDaddTypeAnnotationsToSymbol=true</arg>
                         <arg>--should-stop=ifError=FLOW</arg>
-                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
+                        <arg>-Xplugin:ErrorProne -XepDisableWarningsInGeneratedCode -XepExcludedPaths:.*/target/generated-sources/.* -Xep:NullAway:ERROR -XepOpt:NullAway:OnlyNullMarked=true -XepOpt:NullAway:JSpecifyMode=true</arg>
                     </compilerArgs>
                     <annotationProcessorPaths>
                         <path>
@@ -251,6 +294,9 @@
                 <configuration>
                     <excludes>
                         <exclude>**/PaymentServiceApplication.class</exclude>
+                        <!-- Generated from api/openapi.yaml (ADR-0006) -->
+                        <exclude>**/adapter/in/web/api/**</exclude>
+                        <exclude>**/adapter/in/web/model/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>

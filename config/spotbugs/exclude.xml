@@ -5,4 +5,8 @@
     <Match>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
+    <!-- Generated from api/openapi.yaml (ADR-0006); not our code, analyzed through the contract instead. -->
+    <Match>
+        <Package name="~io\.github\.bsamsonov\.paymentservice\.adapter\.in\.web\.(api|model)"/>
+    </Match>
 </FindBugsFilter>

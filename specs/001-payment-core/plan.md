@@ -92,6 +92,10 @@ Trace id lands in MDC (logs) and in journal rows via the `TraceContext` port.
 test: `spring-boot-testcontainers`, `testcontainers-postgresql`, `testcontainers-junit-jupiter`.
 Plugin: `openapi-generator-maven-plugin` 7.26.0, generator `spring`: `interfaceOnly`, `useSpringBoot4`,
 `useJackson3`, `useBeanValidation`, `openApiNullable=false`, `skipDefaultInterface`, `useTags`.
+Added in T2: `documentationProvider=none`, `annotationLibrary=none` (no springdoc/swagger annotations),
+`generateJsonIncludeAnnotations=true` + `containerDefaultToNull=true` (absent optional fields, including empty
+collections, are omitted), `generateSupportingFiles=false`. The generator ignores `servers` with `interfaceOnly`, so
+the `/api/v1` prefix is part of each path in the contract.
 Generated sources are excluded from Spotless, Error Prone/NullAway, SpotBugs and JaCoCo.
 
 ## Test strategy

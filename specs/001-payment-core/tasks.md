@@ -8,7 +8,7 @@ Tests that cover an AC carry `@DisplayName("001/AC-n: …")`. T1–T3 come first
   `spring-boot-docker-compose` (dev); shared `@TestConfiguration` with `@ServiceConnection` `postgres:17`;
   `spring.jpa.hibernate.ddl-auto=validate`, `fail-on-unknown-properties: true`.
   Verified by: existing context tests (`PaymentServiceApplicationTest`/`IT`) pass against PostgreSQL; no exporter bean.
-- [ ] T2 (setup) Contract: `api/openapi.yaml` per spec (business limits only in `description`); openapi-generator
+- [x] T2 (setup) Contract: `api/openapi.yaml` per spec (business limits only in `description`); openapi-generator
   plugin with the plan's options; generated sources excluded from Spotless, Error Prone/NullAway, SpotBugs, JaCoCo;
   ArchUnit layer rules from the plan (`allowEmptyShould(true)` until the packages exist).
   Verified by: `verify -Pci` green with the generated `PaymentsApi` compiled; ArchUnit test passes.
