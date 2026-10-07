@@ -12,7 +12,7 @@ Tests that cover an AC carry `@DisplayName("001/AC-n: …")`. T1–T3 come first
   plugin with the plan's options; generated sources excluded from Spotless, Error Prone/NullAway, SpotBugs, JaCoCo;
   ArchUnit layer rules from the plan (`allowEmptyShould(true)` until the packages exist).
   Verified by: `verify -Pci` green with the generated `PaymentsApi` compiled; ArchUnit test passes.
-- [ ] T3 (AC-12) Migrations `V1`–`V3` (`currency varchar(3)` + `CHECK`, journal triggers) and JPA entities including
+- [x] T3 (AC-12) Migrations `V1`–`V3` (`currency varchar(3)` + `CHECK`, journal triggers) and JPA entities including
   `jsonb` columns (Hibernate 7 JSON with Jackson 3 — fallback `FormatMapper` bean). Test first: `AppendOnlyJournalIT`
   (`UPDATE`/`DELETE`/`TRUNCATE` rejected with SQLSTATE `42501` on both journals); entity round trip of a `jsonb` column.
 - [ ] T4 (AC-10) Domain: `PaymentId`/event ids (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` transition table,
