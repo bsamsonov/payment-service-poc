@@ -68,9 +68,13 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 ## Testing conventions
 - Unit tests `*Test` (no Spring context where possible); integration tests `*IT` with real PostgreSQL
   (Testcontainers, no H2) and WireMock for HTTP (HTTP clients are not mocked).
-- Acceptance tests carry the AC id: `@DisplayName("AC-2: …")`. Test names state behavior.
+- Acceptance tests carry the spec-qualified AC id: `@DisplayName("001/AC-2: …")`. Test names state behavior.
+  CI (`scripts/spec/check-ac-trace.sh`) already checks that ids exist and that every AC of an `Implemented` spec has a
+  test; review whether the test asserts what the AC says.
 
 ## Process facts useful for review
 - Features come from `specs/NNN-name/{spec,plan,tasks}.md`; non-goals in the spec must not be implemented.
+- A spec is living until its feature PR merges (the last commit sets `Implemented`), then frozen; later behavior
+  changes come as a new spec that supersedes or amends ACs of the old one (`specs/README.md`).
 - Decisions live in `docs/adr/` (MADR); accepted ADRs are never edited, only superseded.
 - Analyzer suppressions and lowered thresholds require a written justification.

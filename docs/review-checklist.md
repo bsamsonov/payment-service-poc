@@ -14,8 +14,9 @@ Format: `RC-NN — title` · **Scope** (where it applies) · **Check** (what mus
 
 ### RC-01 — Acceptance criteria are traced to tests
 - Scope: `feat` PRs with a spec.
-- Check: every AC of the spec has at least one test whose `@DisplayName` starts with its id; tests assert the
-  behavior the AC describes, not just that code runs.
+- Check: every AC of the spec has at least one test whose `@DisplayName` starts with its id (`NNN/AC-n`; CI checks
+  presence via `scripts/spec/check-ac-trace.sh`); tests assert the behavior the AC describes, not just that code
+  runs.
 - Why: the spec is the contract; an untested AC is unimplemented.
 
 ### RC-02 — Nothing outside the spec
