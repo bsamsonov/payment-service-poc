@@ -120,7 +120,7 @@ Generated sources are excluded from Spotless, Error Prone/NullAway, SpotBugs and
 
 Traceability (see `specs/README.md`): every test that covers an AC carries the id in `@DisplayName`, e.g.
 `@DisplayName("001/AC-2: declined card returns 402")` (several: `"001/AC-10, 001/AC-14: …"`);
-`scripts/spec/check-ac-trace.sh` must pass for all 17 AC. The last commit of the PR sets `status: Implemented`.
+`scripts/spec/check-ac-trace.sh` must pass for all 17 AC. The last commit of the last PR (D) sets `status: Implemented`.
 
 Architecture (ArchUnit, added now): `domain` depends on no Spring/JPA/Jackson/Hibernate; `application` does not
 depend on `adapter..`; adapters do not depend on each other; generated `adapter.in.web.api/model` used only in
@@ -134,8 +134,8 @@ depend on `adapter..`; adapters do not depend on each other; generated `adapter.
   contract with a contract test.
 - **Tracing artifact set in Boot 4** (module vs starter, exporter on by default) — verify in T1; export must be off.
 - **Coverage gate 80%** with generated code — excluded from JaCoCo.
-- **Scope size**: ~17 AC in one PR. Mitigation: commit per task; if the PR grows beyond review comfort, split tracing
-  (AC-16) into a follow-up PR with a spec update.
+- **Scope size**: ~17 AC. Mitigation: commit per task and four PRs grouped in `tasks.md` (A setup, B domain,
+  C API, D tracing and docs).
 
 ## ADR links
 - ADR-0006 Contract-first API with generated interfaces (in this PR).
