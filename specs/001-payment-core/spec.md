@@ -3,6 +3,10 @@ id: 001
 title: Payment core
 status: Approved  # Draft | Approved | Implemented | Superseded
 issue: "—"
+supersedes: []
+amends: []
+superseded_by: ""
+amended_by: []
 ---
 
 # 001. Payment core
