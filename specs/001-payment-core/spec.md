@@ -153,7 +153,7 @@ New `api/openapi.yaml`:
   `provider_error`.
 
 ## Data changes
-- `payments`: `id uuid` PK, `amount bigint` (> 0), `currency char(3)`, `payment_method_id`, `external_reference`
+- `payments`: `id uuid` PK, `amount bigint` (> 0), `currency varchar(3)` (`CHECK` `^[A-Z]{3}$`), `payment_method_id`, `external_reference`
   (indexed with `created_at`), `description`, `metadata jsonb`, `status`, `refunded_amount bigint` (0 ≤ x ≤ amount),
   `failure_code`, `request_hash` (AC-17), `last_event_seq` (counter for `payment_events.sequence_no`; every event bumps
   it, so all journal writes of one payment are serialized by the optimistic lock), `created_at`, `updated_at` (Spring
