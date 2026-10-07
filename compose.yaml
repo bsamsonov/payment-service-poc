@@ -1,0 +1,11 @@
+# Local development database. Started automatically by spring-boot-docker-compose on application run
+# (not in tests: tests use Testcontainers). The host port is random, Boot connects via service connection.
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: payments
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments
+    ports:
+      - "5432"
