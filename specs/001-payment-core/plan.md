@@ -73,7 +73,9 @@ sequenceDiagram
 
 ## Validation split (400 vs 422)
 - Schema-level (generated Bean Validation + strict Jackson): required, types, length, patterns, unknown fields
-  (`spring.jackson.deserialization.fail-on-unknown-properties: true`) → `400`.
+  (`spring.jackson.deserialization.fail-on-unknown-properties: true`) → `400`. Jackson coerces by default, so
+  `accept-float-as-int: false` and `spring.jackson.mapper.allow-coercion-of-scalars: false` make `19.99`, `1999.0` and
+  `"1999"` a `400` instead of a truncated or parsed amount (`JacksonStrictnessTest`).
 - Business limits are **not** in the OpenAPI schema as `minimum`/`maximum` (the generator would turn them into
   `@Min`/`@Max` → `400`); they live in `CurrencyPolicy` and produce `422`. The schema documents them in `description`.
 - Malformed path UUID → `404` (handler maps `MethodArgumentTypeMismatchException` on `id`).
