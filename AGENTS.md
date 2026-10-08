@@ -41,6 +41,9 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 - Branches: `feat/NNN-short-name`, `fix/…`, `chore/…`, `docs/…`. Work only through pull requests; `main` is protected.
 - Merge strategy: rebase merge (linear history, atomic commits preserved). Before opening a PR, history may be
   tidied with fixups, but not squashed into one commit.
+- After a PR is merged, clean up: `scripts/git/cleanup-merged.sh` (report) → `--apply` removes the branch's clean
+  worktree and deletes the local branch (`-D`: rebase merge rewrites commits). GitHub deletes the remote branch.
+  Claude Code runs the report at session start.
 - Never use `--no-verify`, never disable checks, never lower coverage thresholds or add analyzer suppressions
   to make a build pass. Suppressions require a written justification.
 
