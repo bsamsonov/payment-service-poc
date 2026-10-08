@@ -10,7 +10,7 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
   tracing (verify the Boot 4 artifact set; export off), `uuid-creator`, Testcontainers; `compose.yaml` +
   `spring-boot-docker-compose` (dev); shared `@TestConfiguration` with `@ServiceConnection` `postgres:17`;
   `spring.jpa.hibernate.ddl-auto=validate`, `fail-on-unknown-properties: true`.
-  Verified by: existing context tests (`PaymentServiceApplicationTest`/`IT`) pass against PostgreSQL; no exporter bean.
+  Verified by: the context test (`PaymentServiceApplicationIT`) passes against PostgreSQL; no exporter bean.
 - [x] T2 (setup) Contract: `api/openapi.yaml` per spec (business limits only in `description`); openapi-generator
   plugin with the plan's options; generated sources excluded from Spotless, Error Prone/NullAway, SpotBugs, JaCoCo;
   ArchUnit layer rules from the plan (`allowEmptyShould(true)` until the packages exist).
