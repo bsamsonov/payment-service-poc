@@ -38,7 +38,7 @@ class PersistenceMappingIT {
                 1999,
                 "USD",
                 "pm_card_visa",
-                "order-42",
+                "order-" + id,
                 "Order 42",
                 Map.of("orderId", "42", "channel", "web"),
                 "PENDING",
@@ -50,7 +50,7 @@ class PersistenceMappingIT {
         assertThat(loaded.getAmount()).isEqualTo(1999);
         assertThat(loaded.getCurrency()).isEqualTo("USD");
         assertThat(loaded.getPaymentMethodId()).isEqualTo("pm_card_visa");
-        assertThat(loaded.getExternalReference()).isEqualTo("order-42");
+        assertThat(loaded.getExternalReference()).isEqualTo("order-" + id);
         assertThat(loaded.getDescription()).isEqualTo("Order 42");
         assertThat(loaded.getMetadata()).containsExactlyInAnyOrderEntriesOf(Map.of("orderId", "42", "channel", "web"));
         assertThat(loaded.getStatus()).isEqualTo("PENDING");
@@ -69,7 +69,7 @@ class PersistenceMappingIT {
     void stateUpdateIsStoredAndBumpsTheVersion() {
         UUID id = UUID.randomUUID();
         PaymentEntity saved = payments.save(new PaymentEntity(
-                id, 5000, "USD", "pm_card_chargeDeclined", "order-44", null, null, "PENDING", "c".repeat(64)));
+                id, 5000, "USD", "pm_card_chargeDeclined", "order-" + id, null, null, "PENDING", "c".repeat(64)));
 
         saved.updateState("FAILED", "card_declined", 0, 2);
         payments.save(saved);
@@ -85,7 +85,7 @@ class PersistenceMappingIT {
     void eventDetailsAndRejectedRequestErrorFieldsRoundTripAsJsonb() {
         UUID paymentId = UUID.randomUUID();
         payments.save(new PaymentEntity(
-                paymentId, 1999, "USD", "pm_card_visa", "order-43", null, null, "PENDING", "b".repeat(64)));
+                paymentId, 1999, "USD", "pm_card_visa", "order-" + paymentId, null, null, "PENDING", "b".repeat(64)));
         UUID eventId = UUID.randomUUID();
         Instant now = Instant.now();
         events.save(new PaymentEventEntity(
@@ -126,7 +126,7 @@ class PersistenceMappingIT {
                 400,
                 "/problems/validation-error",
                 List.of(Map.of("field", "amount", "rule", "NotNull")),
-                "order-43",
+                "order-" + paymentId,
                 now));
 
         assertThat(events.findById(eventId).orElseThrow().getDetails())
