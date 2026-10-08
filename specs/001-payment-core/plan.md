@@ -142,9 +142,9 @@ depend on `adapter..`; adapters do not depend on each other; generated `adapter.
   C API, D tracing and docs).
 
 ## ADR links
-- ADR-0006 Contract-first API with generated interfaces (in this PR).
-- ADR-0007 UUIDv7 identifiers generated in the application (in this PR).
-- **ADR-0008 Audit architecture** (new, in this PR): local append-only journal in the same transaction, snapshot +
+- ADR-0006 Contract-first API with generated interfaces (PR A).
+- ADR-0007 UUIDv7 identifiers generated in the application (PR A).
+- **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only journal in the same transaction, snapshot +
   `sequence_no`, trigger now / DB roles as production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
   central store as future options.
 - ADR-0002 (stack) already covers PostgreSQL/Flyway/JPA/Testcontainers.
