@@ -1,6 +1,7 @@
 # Specifications
 
-One folder per feature: `specs/NNN-short-name/` with three short files.
+One folder per feature: `specs/NNN-short-name/` with three short files. Project scope and the order of specs:
+[`docs/product.md`](../docs/product.md); a new spec starts from its roadmap line.
 
 | File | Question | Owner |
 |---|---|---|
