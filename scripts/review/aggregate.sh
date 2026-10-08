@@ -98,6 +98,11 @@ jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$rou
   "### What changed",
   (.summary[] | "- \(.)"),
   "",
+  "### Architect'"'"'s attention",
+  (if ((.attention // []) | length) == 0 then "- nothing flagged" else
+     "_If you have time for only three, take 1–3._",
+     (.attention | to_entries[] | "- [ ] **\(.key + 1). \(.value.title)** · `\(.value.category)` · \(.value | loc)\n  _Why it matters later:_ \(.value.why)\n  _Decide:_ \(.value.question)") end),
+  "",
   "### Must review",
   (if (.must_review | length) == 0 then "- nothing flagged" else
      (.must_review | to_entries[] | "- [ ] **\(.key + 1).** \(.value | loc) — \(.value.risk)\n  _Ask yourself:_ \(.value.question)") end),

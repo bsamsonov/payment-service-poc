@@ -5,6 +5,7 @@
     "summary",
     "findings",
     "rejected",
+    "attention",
     "must_review",
     "skim",
     "previous",
@@ -100,6 +101,50 @@
             "type": "string"
           },
           "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "attention": {
+      "type": "array",
+      "description": "Architect's attention: at most 7 decisions that are hard to reverse, shape later specs or set a precedent; most important first.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "title",
+          "path",
+          "line",
+          "why",
+          "question"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "irreversible",
+              "architecture",
+              "precedent",
+              "minor"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "why": {
+            "type": "string",
+            "description": "Why it matters later: what becomes expensive to change and which spec or flow it affects."
+          },
+          "question": {
             "type": "string"
           }
         }
