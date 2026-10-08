@@ -68,6 +68,9 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 ## Testing conventions
 - Unit tests `*Test` (no Spring context where possible); integration tests `*IT` with real PostgreSQL
   (Testcontainers, no H2) and WireMock for HTTP (HTTP clients are not mocked).
+- The PostgreSQL container is shared by all tests of a cached Spring context and journal tables (`payment_events`,
+  `rejected_requests`) cannot be cleaned (append-only triggers). Tests use unique data (random ids and external
+  references) and assert only on their own rows, never on table-wide counts.
 - Acceptance tests carry the spec-qualified AC id: `@DisplayName("001/AC-2: …")`. Test names state behavior.
   CI (`scripts/spec/check-ac-trace.sh`) already checks that ids exist and that every AC of an `Implemented` spec has a
   test; review whether the test asserts what the AC says.

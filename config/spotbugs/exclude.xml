@@ -5,4 +5,17 @@
     <Match>
         <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
     </Match>
+    <!-- Generated from api/openapi.yaml (ADR-0006); not our code, analyzed through the contract instead. -->
+    <Match>
+        <Package name="~io\.github\.bsamsonov\.paymentservice\.adapter\.in\.web\.(api|model)"/>
+    </Match>
+    <!-- Insert-only journal entities (spec 001): the application writes the rows and never reads them back;
+         they are read with SQL (audit, tests). Hibernate reads the fields reflectively on insert. -->
+    <Match>
+        <Or>
+            <Class name="io.github.bsamsonov.paymentservice.adapter.out.persistence.PaymentEventEntity"/>
+            <Class name="io.github.bsamsonov.paymentservice.adapter.out.persistence.RejectedRequestEntity"/>
+        </Or>
+        <Bug pattern="URF_UNREAD_FIELD"/>
+    </Match>
 </FindBugsFilter>

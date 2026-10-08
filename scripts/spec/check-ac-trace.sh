@@ -11,7 +11,7 @@
 #   - a test references an AC that does not exist or is inactive;
 #   - a test uses an unqualified id (`AC-n:` without the spec number);
 #   - an active AC of an `Implemented` spec has no test.
-# Warnings: an active AC of an `Approved` spec has no test (the feature PR is in progress).
+# Warnings: an active AC of an `Approved` spec has no test (the feature's PRs are in progress).
 # `Draft` specs: their ACs are valid references but coverage is not checked.
 set -euo pipefail
 
