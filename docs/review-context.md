@@ -17,6 +17,8 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 - Null safety: every package is `@NullMarked` (JSpecify); nullable values are explicit `@Nullable`.
 - Already enforced by CI (do not report): formatting, Error Prone/NullAway, field injection, `System.out`,
   generic exceptions, `java.util.logging`, coverage threshold, SpotBugs/FindSecBugs, CodeQL, secrets scan.
+- Reported by CI as non-blocking code-scanning notes (PMD/CPD, `docs/code-smells.md`): complexity, size, coupling,
+  dead code, duplication. Do not repeat them; mention one only when it hides a concrete defect.
 
 ## Domain invariants
 - **Money**: `amount` is a `long` in minor units plus a `Currency`; never `double`/`float`. Currencies come from a
