@@ -16,7 +16,8 @@
       "Bash(gh pr checks:*)",
       "Bash(gh run view:*)",
       "Bash(lefthook:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(scripts/git/cleanup-merged.sh:*)"
     ],
     "ask": [
       "Bash(git push:*)",
@@ -35,6 +36,18 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/scripts/git/cleanup-merged.sh --quiet || true",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write|MultiEdit",
