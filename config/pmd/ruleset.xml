@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Code smells reported on pull requests (informational, never fails the build).
+  Scope: complexity, size, coupling and dead code — what Error Prone, NullAway and SpotBugs do not cover.
+  Formatting is Spotless's job; bugs are covered by Error Prone/SpotBugs/CodeQL. Keep this list short:
+  a noisy rule teaches reviewers to ignore the report. Rule docs: https://docs.pmd-code.org/latest/pmd_rules_java.html
+-->
+<ruleset name="payment-service code smells"
+         xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+    <description>Maintainability smells for pull request annotations.</description>
+
+    <!-- Complexity and size -->
+    <rule ref="category/java/design.xml/CognitiveComplexity"/>
+    <rule ref="category/java/design.xml/CyclomaticComplexity"/>
+    <rule ref="category/java/design.xml/NPathComplexity"/>
+    <rule ref="category/java/design.xml/NcssCount"/>
+    <rule ref="category/java/design.xml/GodClass"/>
+    <rule ref="category/java/design.xml/TooManyMethods"/>
+    <rule ref="category/java/design.xml/TooManyFields"/>
+    <rule ref="category/java/design.xml/ExcessiveParameterList"/>
+    <rule ref="category/java/design.xml/ExcessivePublicCount"/>
+    <rule ref="category/java/design.xml/CouplingBetweenObjects"/>
+    <rule ref="category/java/design.xml/AvoidDeeplyNestedIfStmts"/>
+    <rule ref="category/java/design.xml/SimplifyBooleanReturns"/>
+    <rule ref="category/java/design.xml/SimplifiedTernary"/>
+    <rule ref="category/java/design.xml/CollapsibleIfStatements"/>
+
+    <!-- Dead and redundant code -->
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateField"/>
+    <rule ref="category/java/bestpractices.xml/UnusedPrivateMethod"/>
+    <rule ref="category/java/bestpractices.xml/UnusedLocalVariable"/>
+    <rule ref="category/java/bestpractices.xml/UnusedFormalParameter"/>
+    <rule ref="category/java/bestpractices.xml/UnusedAssignment"/>
+    <rule ref="category/java/codestyle.xml/UnnecessaryImport"/>
+
+    <!-- Error-handling smells -->
+    <rule ref="category/java/errorprone.xml/EmptyCatchBlock"/>
+    <rule ref="category/java/design.xml/AvoidThrowingRawExceptionTypes"/>
+    <rule ref="category/java/design.xml/ExceptionAsFlowControl"/>
+    <rule ref="category/java/bestpractices.xml/PreserveStackTrace"/>
+    <rule ref="category/java/bestpractices.xml/AvoidReassigningParameters"/>
+</ruleset>
