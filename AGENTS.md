@@ -15,6 +15,7 @@ Spring Security (JWT), Testcontainers, WireMock, Maven wrapper.
 | Fast check (compile + Error Prone/NullAway, unit tests, ArchUnit) | `./mvnw verify -DskipITs -Djacoco.skip=true` |
 | Full check, as in CI (+ integration tests, coverage gate) | `./mvnw verify` |
 | CI-only analyzers (SpotBugs/FindSecBugs) | `./mvnw verify -Pci` |
+| Code smells report, never fails (PMD/CPD, [details](docs/code-smells.md)) | `./mvnw verify -Psmells -DskipTests` |
 | Install git hooks (once per clone) | `lefthook install` |
 | AC-to-test traceability (also in CI) | `scripts/spec/check-ac-trace.sh` |
 | AI review of a pull request | `scripts/review/pr-review.sh <pr> [--delta]` (Claude Code: `/pr-review <pr>`) |
