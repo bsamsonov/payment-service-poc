@@ -26,14 +26,16 @@ class AppendOnlyJournalIT {
     @Autowired
     private JdbcTemplate jdbc;
 
+    // Journal rows can never be deleted and the database is shared by every test of the cached context:
+    // keep the rows unique so other tests never match them.
     @BeforeEach
     void insertJournalRows() {
         UUID paymentId = UUID.randomUUID();
         jdbc.update("""
                 insert into payments (id, amount, currency, payment_method_id, external_reference, status,
                     refunded_amount, request_hash, last_event_seq, created_at, updated_at, version)
-                values (?, 1000, 'USD', 'pm_card_visa', 'order-1', 'PENDING', 0, repeat('a', 64), 1, now(), now(), 0)
-                """, paymentId);
+                values (?, 1000, 'USD', 'pm_card_visa', ?, 'PENDING', 0, repeat('a', 64), 1, now(), now(), 0)
+                """, paymentId, "order-" + paymentId);
         jdbc.update("""
                 insert into payment_events (id, payment_id, sequence_no, event_type, to_status, actor_type, source,
                     amount, currency, refunded_amount, occurred_at, recorded_at)
