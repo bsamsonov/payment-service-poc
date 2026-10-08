@@ -10,8 +10,12 @@ spring:
       # Flyway owns the schema; a mismatch with the entities fails startup
       ddl-auto: validate
   jackson:
+    # Strict request binding: a wrong type is a 400, never a silent coercion (a money amount must not be truncated)
     deserialization:
       fail-on-unknown-properties: true
+      accept-float-as-int: false
+    mapper:
+      allow-coercion-of-scalars: false
 
 server:
   shutdown: graceful
