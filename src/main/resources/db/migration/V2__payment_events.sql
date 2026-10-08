@@ -50,7 +50,10 @@ create table payment_events (
     constraint payment_events_sequence_unique unique (payment_id, sequence_no),
     constraint payment_events_to_status_present check (event_type = 'PROVIDER_ATTEMPT' or to_status is not null),
     constraint payment_events_attempt_fields check (
-        event_type <> 'PROVIDER_ATTEMPT' or (attempt_no is not null and outcome is not null and to_status is null))
+        event_type <> 'PROVIDER_ATTEMPT' or (attempt_no is not null and outcome is not null and to_status is null)),
+    constraint payment_events_attempt_fields_only_on_attempts check (
+        event_type = 'PROVIDER_ATTEMPT' or (attempt_no is null and outcome is null and provider_http_status is null
+            and provider_request_id is null and provider_duration_ms is null))
 );
 
 create trigger payment_events_append_only_rows
