@@ -46,6 +46,48 @@ jobs:
             target/site/jacoco/
           retention-days: 7
 
+  code-smells:
+    name: Code smells (PMD/CPD)
+    # Informational: findings become code-scanning notes on the PR diff and never fail this job.
+    # Not a required check. Switch off without a code change: repository variable CODE_SMELLS=off
+    # (docs/code-smells.md).
+    if: vars.CODE_SMELLS != 'off'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Cache Maven wrapper distribution
+        uses: actions/cache@v6
+        with:
+          path: ~/.m2/wrapper
+          key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
+      - name: Run PMD and CPD (report only)
+        run: ./mvnw -B verify -Psmells -DskipTests -Djacoco.skip=true -Dspotless.check.skip=true
+      - name: Convert reports to SARIF and write the job summary
+        run: python3 scripts/smells/to-sarif.py . target/pmd.xml target/cpd.xml target/smells >>"$GITHUB_STEP_SUMMARY"
+      # Uploads fail where the token cannot write security events (e.g. Dependabot PRs); that must not
+      # turn the job red.
+      - name: Upload PMD results
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: target/smells/pmd.sarif
+          category: code-smells-pmd
+      - name: Upload CPD results
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: target/smells/cpd.sarif
+          category: code-smells-cpd
+
   secrets-scan:
     name: Secrets scan (gitleaks)
     runs-on: ubuntu-latest
