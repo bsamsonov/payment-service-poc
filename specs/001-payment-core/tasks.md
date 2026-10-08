@@ -41,8 +41,12 @@ If it grows past ~600 lines: T7–T8 and T9–T10 as two PRs.
   `UNKNOWN` → `202` `PROCESSING`; `FailureMessages` dictionary; fake provider table complete.
   Tests first: `CreatePaymentIT` cases (parameterized declines, `OutputCaptureExtension`, timeout).
 - [ ] T9 (AC-5, AC-6) Validation: `400` with all field errors (schema, unknown fields, malformed JSON, lowercase
-  currency), `422` from `CurrencyPolicy` via `BusinessRuleViolation`; `RejectedRequestRecorder` + `rejected_requests`
-  adapter written by `ProblemDetailsHandler`. Tests first: `PaymentRequestValidationTest` (slice), `RejectedRequestsIT`.
+  currency, non-integer amount: `19.99`, `"1999"`), `422` from `CurrencyPolicy` via `BusinessRuleViolation`;
+  `metadata` limits — count (≤ 10) and value length (≤ 500) come from the generated `@Size`, key length (≤ 40) needs
+  an explicit check (OpenAPI 3.0 cannot constrain map keys) — each over the limit → `400`;
+  `RejectedRequestRecorder` + `rejected_requests` adapter written by `ProblemDetailsHandler`.
+  Tests first: `PaymentRequestValidationTest` (slice; one case per `metadata` limit and per amount type),
+  `RejectedRequestsIT`.
 - [ ] T10 (AC-7, AC-8, AC-9) `GetPaymentQuery`, `GET /payments/{id}` (malformed id → `404`) and
   `GET /payments?externalReference=…` (≤ 20, newest first, missing parameter → `400`).
   Tests first: `GetPaymentIT`, `FindPaymentsByExternalReferenceIT`.

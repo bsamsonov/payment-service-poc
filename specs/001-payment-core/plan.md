@@ -76,6 +76,8 @@ sequenceDiagram
   (`spring.jackson.deserialization.fail-on-unknown-properties: true`) → `400`. Jackson coerces by default, so
   `accept-float-as-int: false` and `spring.jackson.mapper.allow-coercion-of-scalars: false` make `19.99`, `1999.0` and
   `"1999"` a `400` instead of a truncated or parsed amount (`JacksonStrictnessTest`).
+- `metadata`: the generated `@Size` covers the pair count and value length; the key length (≤ 40) cannot be expressed
+  in OpenAPI 3.0, so the web adapter checks it explicitly and reports it as a field error (`400`).
 - Business limits are **not** in the OpenAPI schema as `minimum`/`maximum` (the generator would turn them into
   `@Min`/`@Max` → `400`); they live in `CurrencyPolicy` and produce `422`. The schema documents them in `description`.
 - Malformed path UUID → `404` (handler maps `MethodArgumentTypeMismatchException` on `id`).
