@@ -36,6 +36,7 @@ lefthook install                              # once per clone
 ## How this project is built
 | Layer | What runs |
 |---|---|
+| Requirements | [`docs/product.md`](docs/product.md) — scope of v1, non-goals, roadmap of specs |
 | Specs | `specs/NNN-name/{spec,plan,tasks}.md` — acceptance criteria with ids, mapped to tests |
 | Agent rules | [`AGENTS.md`](AGENTS.md) (all agents), [`CLAUDE.md`](CLAUDE.md) (Claude Code) |
 | Claude Code hooks | format Java on edit; fast check when a turn ends (failures go back to the agent) |

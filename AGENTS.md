@@ -86,5 +86,6 @@ Integration tests (`*IT`) need Docker (Testcontainers).
   together with this file.
 
 ## Documentation
+- Product requirements and spec roadmap: `docs/product.md` — read it before drafting a new spec.
 - Specs: `specs/`; decisions: `docs/adr/` (MADR, never edited after acceptance — superseded by new ADRs).
 - Living docs (`README.md`, `docs/architecture.md`, `api/openapi.yaml`) are updated in the same PR as the behavior change.
