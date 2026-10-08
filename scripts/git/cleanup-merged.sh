@@ -6,8 +6,9 @@
 #   --apply    remove the branches' clean worktrees and delete the branches
 #   --quiet    print nothing when there is nothing to report (for hooks)
 #
-# A branch qualifies when its upstream is gone (GitHub deletes head branches on merge) and `gh` confirms a merged
-# PR for it. Rebase merge rewrites commits, so `git branch -d` would refuse; the PR check makes `-D` safe.
+# A branch qualifies when its upstream is gone (GitHub deletes head branches on merge) and `gh` finds a merged PR
+# whose head commit equals the local tip — so nothing on the branch is missing from the merge. Rebase merge
+# rewrites commits, so `git branch -d` would refuse; this check is what makes `-D` safe.
 # Never touched: the branch checked out in the main worktree, worktrees with local changes, branches whose PR is
 # not merged (closed or unknown) — those are only reported.
 set -euo pipefail
@@ -38,11 +39,15 @@ report=()
 while read -r branch track; do
   [[ "$track" == "[gone]" ]] || continue
   pr=""
+  tip="$(git rev-parse "refs/heads/$branch")"
   if $gh_ok; then
-    pr="$(gh pr list --head "$branch" --state merged --json number --jq '.[0].number // empty' 2>/dev/null || true)"
+    # Only a merged PR whose last commit is exactly the local tip: no local commits after the merge,
+    # no reused branch name with new work.
+    pr="$(gh pr list --head "$branch" --state merged --limit 100 --json number,headRefOid \
+      --jq "map(select(.headRefOid == \"$tip\")) | .[0].number // empty" 2>/dev/null || true)"
   fi
   if [[ -z "$pr" ]]; then
-    report+=("- $branch: upstream gone, no merged PR found — check manually")
+    report+=("- $branch: upstream gone, no merged PR with the local tip ${tip:0:7} — check manually")
     continue
   fi
   wt="$(worktree_of "$branch")"
@@ -70,7 +75,7 @@ if [[ ${#report[@]} -eq 0 ]]; then
   exit 0
 fi
 if $apply; then
-  echo "Merged branches cleaned up:"
+  echo "Cleanup result:"
 else
   echo "Merged branches to clean up (run scripts/git/cleanup-merged.sh --apply):"
 fi
