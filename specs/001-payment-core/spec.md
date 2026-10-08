@@ -155,7 +155,7 @@ New `api/openapi.yaml`:
 ## Data changes
 - `payments`: `id uuid` PK, `amount bigint` (> 0), `currency varchar(3)` (`CHECK` `^[A-Z]{3}$`), `payment_method_id`, `external_reference`
   (indexed with `created_at`), `description`, `metadata jsonb`, `status`, `refunded_amount bigint` (0 ≤ x ≤ amount),
-  `failure_code`, `request_hash` (AC-17), `last_event_seq` (counter for `payment_events.sequence_no`; every event bumps
+  `failure_code` (`CHECK`: set if and only if `status = FAILED`), `request_hash` (AC-17), `last_event_seq` (counter for `payment_events.sequence_no`; every event bumps
   it, so all journal writes of one payment are serialized by the optimistic lock), `created_at`, `updated_at` (Spring
   Data auditing), `version` (optimistic lock).
 - `payment_events`: `id uuid` PK (UUIDv7), `payment_id` FK **without cascade**, `sequence_no` (unique per payment),
@@ -164,7 +164,8 @@ New `api/openapi.yaml`:
   (`CLIENT`, `PROVIDER`, `SYSTEM`, `OPERATOR`), `actor_id` (null until 004), `source` (`API`, `PROVIDER_RESPONSE`,
   `WEBHOOK`, `RECONCILER`, `REFUND`), `reason_code`, `provider_code`, snapshot `amount`/`currency`/`refunded_amount`,
   `trace_id`, `idempotency_key` (null until 002), `request_hash` (on `PAYMENT_CREATED`), `provider_event_id` (005);
-  for `PROVIDER_ATTEMPT`: `attempt_no`, `outcome`, `provider_http_status`, `provider_request_id`, `provider_duration_ms`; `occurred_at`,
+  for `PROVIDER_ATTEMPT` only (`CHECK`: null on other events): `attempt_no`, `outcome`, `provider_http_status`,
+  `provider_request_id`, `provider_duration_ms`; `occurred_at`,
   `recorded_at`, `details jsonb`. No card data, `description`, `metadata` or request bodies.
 - `rejected_requests` (requests rejected before a payment exists; in 004 also `401/403`): `id uuid` PK, `trace_id`,
   `actor_type`, `actor_id` (null until 004), `http_method`, `path`, `http_status`, `problem_type`, `error_fields`

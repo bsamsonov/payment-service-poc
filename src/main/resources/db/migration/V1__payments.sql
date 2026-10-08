@@ -19,7 +19,9 @@ create table payments (
     created_at         timestamptz  not null,
     updated_at         timestamptz  not null,
     version            bigint       not null,
-    constraint payments_refunded_amount_range check (refunded_amount >= 0 and refunded_amount <= amount)
+    constraint payments_refunded_amount_range check (refunded_amount >= 0 and refunded_amount <= amount),
+    -- FAILED is terminal, so the failure code is set exactly when the payment failed
+    constraint payments_failure_code_status check ((status = 'FAILED') = (failure_code is not null))
 );
 
 create index payments_external_reference_created_at_idx on payments (external_reference, created_at desc);
