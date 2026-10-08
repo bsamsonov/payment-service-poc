@@ -2,7 +2,7 @@
 
 -- Shared by every append-only table: rejects row changes and TRUNCATE with SQLSTATE 42501.
 -- Protects against application bugs and manual edits, not against the table owner (who can disable triggers);
--- separate database roles are the production option (ADR-0008).
+-- separate database roles are the production option.
 create function forbid_append_only_change() returns trigger
     language plpgsql as
 $$
