@@ -16,28 +16,33 @@ Root `io.github.bsamsonov.paymentservice`; every package has `package-info.java`
 | Package | Classes | Notes |
 |---|---|---|
 | `domain` | `Payment` (aggregate), `PaymentId` (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` (transition table), `FailureCode`, `PaymentEvent` (+ `EventType`, `ActorType`, `EventSource`), `ProviderOutcome` (sealed: `Succeeded`, `Declined(code, providerCode)`, `Rejected`, `Unknown`), `ProviderAttempt`, `TransitionResult` (`Applied`, `NoOp`, `Rejected`) | no Spring/JPA/Jackson; `Clock` passed in |
-| `application` | `CreatePaymentUseCase`, `GetPaymentQuery`, `PaymentStatusApplier`, `RejectedRequestRecorder`, `RequestHasher` (canonical JSON → SHA-256), `CreatePaymentCommand`, `BusinessRuleViolation` (collects all 422 errors), ports `PaymentRepository`, `PaymentJournal`, `PaymentProvider`, `RejectedRequestLog`, `TraceContext` | may use `spring-tx` (`TransactionTemplate`) only |
-| `adapter.in.web` | `PaymentsController` (implements generated `PaymentsApi`), `PaymentWebMapper`, `ProblemDetailsHandler` (`@RestControllerAdvice`, extends `ResponseEntityExceptionHandler`), `TraceparentResponseFilter`, `FailureMessages` (dictionary) | generated code in `adapter.in.web.api` / `.model` |
-| `adapter.out.persistence` | `PaymentEntity`, `PaymentEventEntity` (`@Immutable`), `RejectedRequestEntity` (`@Immutable`), Spring Data repositories (no delete methods), `JpaPaymentRepository`, `JpaPaymentJournal`, `JpaRejectedRequestLog`, mappers | domain ↔ entity mapping; entities never leave the adapter |
+| `application` | `CreatePaymentUseCase`, `GetPaymentQuery`, `PaymentStatusApplier`, `RequestHasher` (canonical JSON → SHA-256), `CreatePaymentCommand`, `BusinessRuleViolation` (collects all 422 errors), ports `PaymentRepository`, `PaymentJournal` (events and provider attempts), `PaymentProvider`, `TraceContext` | may use `spring-tx` (`TransactionTemplate`) only |
+| `adapter.in.web` | `PaymentsController` (implements generated `PaymentsApi`), `PaymentWebMapper`, `ProblemDetailsHandler` (`@RestControllerAdvice`, extends `ResponseEntityExceptionHandler`), `TraceparentResponseFilter`, `FailureMessages` (dictionary), `RejectedRequestAuditLog` (`AUDIT` line for `400`/`422`) | generated code in `adapter.in.web.api` / `.model` |
+| `adapter.out.persistence` | `PaymentEntity`, `PaymentEventEntity` (`@Immutable`), `ProviderAttemptEntity` (`@Immutable`), Spring Data repositories (no delete methods), `JpaPaymentRepository`, `JpaPaymentJournal`, mappers | domain ↔ entity mapping; entities never leave the adapter |
 | `adapter.out.provider.fake` | `FakePaymentProvider` | `@ConditionalOnProperty(payments.provider=fake)`; table from spec |
 | `adapter.out.tracing` | `MicrometerTraceContext` | current trace id from Micrometer `Tracer` |
 | `config` | `PaymentsProperties` (`@ConfigurationProperties`: provider, currency allow-list, min/max), `ClockConfig`, `TransactionConfig` | |
 
 Status applier algorithm (AC-10, AC-11, AC-14): load payment → `payment.apply(target, data)` returns
-`Applied | NoOp | Rejected` → for `Applied`/`Rejected` append event with `sequence_no = ++last_event_seq` → save →
-commit. On `ObjectOptimisticLockingFailureException`: re-read and re-apply, at most 3 attempts, then fail loudly
-(ERROR log; the payment stays in its last committed state).
+`Applied | NoOp | Rejected` → for `Applied`/`Rejected` append event with `sequence_no = max(sequence_no) + 1` → save
+(only `Applied` changes `payments`) → commit. On `ObjectOptimisticLockingFailureException` or a violation of
+`payment_events_sequence_unique`: re-read and re-apply, at most 3 attempts, then fail loudly (ERROR log; the payment
+stays in its last committed state).
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:
-- `V1__payments.sql` — `payments` per spec; checks `amount > 0`, `0 <= refunded_amount <= amount`,
-  `currency ~ '^[A-Z]{3}$'` (`varchar(3)`, not `char(3)`: Hibernate expects `varchar` for `String`); index `(external_reference, created_at DESC)`.
-- `V2__payment_events.sql` — `payment_events` per spec; FK without cascade; `UNIQUE (payment_id, sequence_no)`;
-  function `forbid_append_only_change()` + row and truncate triggers.
-- `V3__rejected_requests.sql` — `rejected_requests`, same function and triggers.
+- `V1__reference_tables.sql` — reference tables per spec (`code` PK + `description`), filled with the 001 values.
+- `V2__append_only_guard.sql` — function `forbid_append_only_change()`, shared by both logs.
+- `V3__payments.sql` — `payments` per spec; index `(external_reference, created_at DESC)`.
+- `V4__payment_events.sql` — the audit log per spec; FK without cascade; `UNIQUE (payment_id, sequence_no)`; row and
+  truncate triggers.
+- `V5__provider_attempts.sql` — the provider call log per spec; index on `payment_id`; the same triggers.
 
-JSON columns (`metadata`, `details`, `error_fields`): `jsonb` via Hibernate `@JdbcTypeCode(SqlTypes.JSON)`.
-Statuses and enums are stored as `varchar` with `CHECK` constraints (readable in SQL, safe to extend).
+Coded values are rows of reference tables referenced by FK; the Java enums mirror them, and an IT checks that every
+enum constant exists in its table (T6). Strings are `text` (`String` maps to it under `validate`), every constraint is
+named. JSON column (`metadata`): `jsonb` via Hibernate `@JdbcTypeCode(SqlTypes.JSON)`. The schema went through an
+architecture review before PR A was merged (reference tables, provider attempts apart from the audit log, no snapshot,
+no `rejected_requests` table).
 Flyway owns the schema; Hibernate runs with `spring.jpa.hibernate.ddl-auto=validate`, so a mismatch between the
 entities and the migrated schema (missing table/column, incompatible type) fails startup and every IT.
 Local DB: `compose.yaml` with `postgres:17` + `spring-boot-docker-compose` (dev only). Tests: Testcontainers
@@ -52,22 +57,21 @@ sequenceDiagram
   participant DB as PostgreSQL
   participant P as PaymentProvider
   C->>W: POST /payments (traceparent?)
-  W->>W: schema validation (400 → rejected_requests)
+  W->>W: schema validation (400 → AUDIT log)
   W->>U: CreatePaymentCommand
-  U->>U: business rules (422 → rejected_requests), request hash
+  U->>U: business rules (422 → AUDIT log), request hash
   U->>DB: Tx1: payment PENDING + PAYMENT_CREATED
   U->>P: charge(paymentId, amount, pm)  [no transaction]
   P-->>U: outcome + attempts
-  U->>DB: Tx2: PROVIDER_ATTEMPT×n + status + STATUS_CHANGED
+  U->>DB: Tx2: provider_attempts×n + status + STATUS_CHANGED
   U-->>W: payment / outcome
   W-->>C: 201 | 402 | 502 | 202 (+ Location, traceparent)
 ```
 
 ## Transactions and concurrency
-- Tx 1 and Tx 2 via `TransactionTemplate`; the provider call between them. `RejectedRequestRecorder` writes in its own
-  short transaction (no business transaction exists at that point).
-- Optimistic locking (`@Version`) on `payments`; `last_event_seq` makes every journal write bump the version, so
-  sequence numbers never collide.
+- Tx 1 and Tx 2 via `TransactionTemplate`; the provider call between them. Rejected requests touch no database.
+- Optimistic locking (`@Version`) on `payments` for status changes; `UNIQUE (payment_id, sequence_no)` for every
+  journal write, so a rejected transition does not change the payment row and sequence numbers never collide.
 - No pessimistic locks. Retry of the applier only (bounded, re-reads fresh state).
 - Hikari pool stays default; virtual threads already enabled — the provider call holds no connection.
 
@@ -81,8 +85,8 @@ sequenceDiagram
 - Business limits are **not** in the OpenAPI schema as `minimum`/`maximum` (the generator would turn them into
   `@Min`/`@Max` → `400`); they live in `CurrencyPolicy` and produce `422`. The schema documents them in `description`.
 - Malformed path UUID → `404` (handler maps `MethodArgumentTypeMismatchException` on `id`).
-- `rejected_requests` rows are written by `ProblemDetailsHandler` for every `400`/`422` on any endpoint; `404` is not
-  recorded in 001.
+- `ProblemDetailsHandler` writes one `AUDIT` log line (fields per spec, no values) for every `400`/`422` on any
+  endpoint; `404` is not recorded in 001.
 
 ## Tracing
 `spring-boot-micrometer-tracing-opentelemetry` (Micrometer → OTel bridge), W3C propagation (Boot default), no exporter
@@ -109,15 +113,15 @@ Generated sources are excluded from Spotless, Error Prone/NullAway, SpotBugs and
 | AC-2 | IT, parameterized over 4 payment methods | `CreatePaymentIT` |
 | AC-3 | IT + `OutputCaptureExtension` for the ERROR line | `CreatePaymentIT` |
 | AC-4 | IT | `CreatePaymentIT` |
-| AC-5 | slice `@WebMvcTest`, parameterized (shape, all errors) + 1 IT case for the `rejected_requests` row | `PaymentRequestValidationTest`, `RejectedRequestsIT` |
+| AC-5 | slice `@WebMvcTest`, parameterized (shape, all errors) + `OutputCaptureExtension` for the `AUDIT` line (no values) | `PaymentRequestValidationTest` |
 | AC-6 | unit (`CurrencyPolicyTest`) + slice + 1 IT case | same + `CurrencyPolicyTest` |
 | AC-7, AC-8 | IT | `GetPaymentIT` |
 | AC-9 | IT | `FindPaymentsByExternalReferenceIT` |
 | AC-10 | unit: full transition table; IT: rejected and conflicting duplicate are journaled, identical duplicate is not | `PaymentStatusTest`, `PaymentTest`, `PaymentStatusApplierIT` |
-| AC-11 | IT: sequence and snapshot; rollback when the event insert fails (`@MockitoSpyBean` on the journal) | `PaymentStatusApplierIT` |
-| AC-12 | IT via `JdbcTemplate` on both journals | `AppendOnlyJournalIT` |
+| AC-11 | IT: sequence, statuses and failure code; rollback when the event insert fails (`@MockitoSpyBean` on the journal) | `PaymentStatusApplierIT` |
+| AC-12 | IT via `JdbcTemplate` on both logs | `AppendOnlyJournalIT` |
 | AC-13 | IT with a recording provider (`isActualTransactionActive()==false`, payment visible via a separate connection) | `ProviderCallTransactionIT` |
-| AC-14 | IT: two threads + `CountDownLatch` on one `PROCESSING` payment → one applied, one rejected, no exception | `PaymentStatusApplierIT` |
+| AC-14 | IT: two threads + `CountDownLatch` on one `PROCESSING` payment → one applied, one rejected, no exception; same for two rejected transitions (sequence collision) | `PaymentStatusApplierIT` |
 | AC-15 | IT | `CreatePaymentIT` |
 | AC-16 | IT with and without `traceparent` | `TracingIT` |
 | AC-17 | unit (canonicalization cases) + IT (column and event) | `RequestHasherTest`, `CreatePaymentIT` |
@@ -144,7 +148,8 @@ depend on `adapter..`; adapters do not depend on each other; generated `adapter.
 ## ADR links
 - ADR-0006 Contract-first API with generated interfaces (PR A).
 - ADR-0007 UUIDv7 identifiers generated in the application (PR A).
-- **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only journal in the same transaction, snapshot +
-  `sequence_no`, trigger now / DB roles as production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
+- **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only audit log in the same transaction, the change
+  only (no snapshot) + `sequence_no` guarded by a unique key, provider attempts in a separate log, reference tables,
+  rejected requests in the `AUDIT` log instead of a table, trigger now / DB roles as production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
   central store as future options.
 - ADR-0002 (stack) already covers PostgreSQL/Flyway/JPA/Testcontainers.
