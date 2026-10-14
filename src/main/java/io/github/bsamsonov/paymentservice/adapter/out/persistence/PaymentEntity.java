@@ -38,8 +38,10 @@ class PaymentEntity {
     @JdbcTypeCode(SqlTypes.JSON)
     private @Nullable Map<String, String> metadata;
 
+    @Column(columnDefinition = "payment_status")
     private String status;
 
+    @Column(columnDefinition = "failure_code")
     private @Nullable String failureCode;
 
     private String requestHash;

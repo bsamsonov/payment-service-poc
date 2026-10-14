@@ -15,11 +15,11 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
   plugin with the plan's options; generated sources excluded from Spotless, Error Prone/NullAway, SpotBugs, JaCoCo;
   ArchUnit layer rules from the plan (`allowEmptyShould(true)` until the packages exist).
   Verified by: `verify -Pci` green with the generated `PaymentsApi` compiled; ArchUnit test passes.
-- [x] T3 (AC-12) Migrations `V1`–`V5` (reference tables, append-only guard, `payments`, `payment_events`,
+- [x] T3 (AC-12) Migrations `V1`–`V5` (coded-value domains, append-only guard, `payments`, `payment_events`,
   `provider_attempts`) and JPA entities including the `jsonb` column (Hibernate 7 JSON with Jackson 3 — fallback
   `FormatMapper` bean). Test first: `AppendOnlyJournalIT` (`UPDATE`/`DELETE`/`TRUNCATE` rejected with SQLSTATE `42501`
-  on both logs); `PersistenceMappingIT` (every column written); `SchemaConstraintsIT` (FKs, checks, unique sequence).
-  Reworked after the architecture review of the schema (data model in the spec).
+  on both logs); `PersistenceMappingIT` (every column written); `SchemaConstraintsIT` (domains, checks, unique
+  sequence). Reworked after the architecture review of the schema (data model in the spec).
 
 ## PR B — domain, journal, status applier (AC-10, AC-11, AC-14, AC-17)
 
@@ -33,8 +33,8 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
   lock or sequence collision (bounded).
   Tests first: `PaymentStatusApplierIT` (sequence, statuses and failure code, rollback on failed event insert, rejected
   and conflicting duplicate journaled, identical duplicate not, two threads on one `PROCESSING` payment);
-  `ReferenceTablesIT` (every constant of `PaymentStatus`, `FailureCode`, `EventType`, `ActorType`, `EventSource`,
-  `ProviderOutcome` exists in its reference table).
+  `CodedValueDomainsIT` (every constant of `PaymentStatus`, `FailureCode`, `EventType`, `ActorType`, `EventSource`,
+  `ProviderOutcome` is accepted by its domain; the actor/source pairs by the pair check).
 
 ## PR C — API: create and read payments (AC-1…AC-9, AC-13, AC-15)
 

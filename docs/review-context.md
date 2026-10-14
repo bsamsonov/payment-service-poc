@@ -41,9 +41,9 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
   provider call to `provider_attempts`; both are append-only (trigger now; `UPDATE`/`DELETE` denied to the application
   DB role in production). An event records the change only, not a snapshot of the payment. Requests rejected before a
   payment exists go to the `AUDIT` log, not to a table.
-- **Schema conventions** (spec 001, Data changes): coded values are rows of reference tables referenced by FK, not
-  `CHECK` lists; `text` with a length `CHECK` only where the length is a rule; every constraint is named; no columns
-  for future specs.
+- **Schema conventions** (spec 001, Data changes): coded values are domains over `text` with a named `CHECK` (entity
+  fields declare `columnDefinition` = the domain), not reference tables or PG `ENUM`; `text` with a length `CHECK` only
+  where the length is a rule; every constraint is named; no columns for future specs.
 - **Refunds**: full or partial; the total refunded never exceeds the payment amount.
 - **Identifiers**: payment `id` is UUIDv7. The Stripe PaymentIntent id is never exposed in the API.
 
