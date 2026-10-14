@@ -2,8 +2,9 @@
 -- with a description. Columns refer to them by foreign key; the code is the natural key, so reads need no join.
 -- Later specs add rows by INSERT in their own migrations. The Java enums mirror these rows; a test keeps them equal.
 create table payment_statuses (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint payment_statuses_pk primary key (code)
 );
 
 insert into payment_statuses (code, description) values
@@ -15,8 +16,9 @@ insert into payment_statuses (code, description) values
     ('REFUNDED',           'The whole amount was refunded; terminal');
 
 create table failure_codes (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint failure_codes_pk primary key (code)
 );
 
 insert into failure_codes (code, description) values
@@ -27,8 +29,9 @@ insert into failure_codes (code, description) values
     ('provider_error',          'The provider refused the request; no money moved');
 
 create table payment_event_types (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint payment_event_types_pk primary key (code)
 );
 
 insert into payment_event_types (code, description) values
@@ -37,8 +40,9 @@ insert into payment_event_types (code, description) values
     ('TRANSITION_REJECTED', 'A transition was refused; the payment did not change');
 
 create table actor_types (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint actor_types_pk primary key (code)
 );
 
 insert into actor_types (code, description) values
@@ -47,8 +51,9 @@ insert into actor_types (code, description) values
 
 -- The channel an event came through. An operation (such as a refund) is an event type, not a source.
 create table event_sources (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint event_sources_pk primary key (code)
 );
 
 insert into event_sources (code, description) values
@@ -69,8 +74,9 @@ insert into actor_sources (actor_type, source) values
     ('PROVIDER', 'PROVIDER_RESPONSE');
 
 create table provider_outcomes (
-    code        text primary key,
-    description text not null
+    code        text not null,
+    description text not null,
+    constraint provider_outcomes_pk primary key (code)
 );
 
 insert into provider_outcomes (code, description) values
