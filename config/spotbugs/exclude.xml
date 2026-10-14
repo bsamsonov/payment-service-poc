@@ -14,7 +14,7 @@
     <Match>
         <Or>
             <Class name="io.github.bsamsonov.paymentservice.adapter.out.persistence.PaymentEventEntity"/>
-            <Class name="io.github.bsamsonov.paymentservice.adapter.out.persistence.RejectedRequestEntity"/>
+            <Class name="io.github.bsamsonov.paymentservice.adapter.out.persistence.ProviderAttemptEntity"/>
         </Or>
         <Bug pattern="URF_UNREAD_FIELD"/>
     </Match>

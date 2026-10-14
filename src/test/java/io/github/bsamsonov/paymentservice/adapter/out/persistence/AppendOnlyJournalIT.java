@@ -33,19 +33,19 @@ class AppendOnlyJournalIT {
         UUID paymentId = UUID.randomUUID();
         jdbc.update("""
                 insert into payments (id, amount, currency, payment_method_id, external_reference, status,
-                    refunded_amount, request_hash, last_event_seq, created_at, updated_at, version)
-                values (?, 1000, 'USD', 'pm_card_visa', ?, 'PENDING', 0, repeat('a', 64), 1, now(), now(), 0)
+                    request_hash, created_at, updated_at, version)
+                values (?, 1000, 'USD', 'pm_card_visa', ?, 'PENDING', repeat('a', 64), now(), now(), 0)
                 """, paymentId, "order-" + paymentId);
         jdbc.update("""
                 insert into payment_events (id, payment_id, sequence_no, event_type, to_status, actor_type, source,
-                    amount, currency, refunded_amount, occurred_at, recorded_at)
-                values (?, ?, 1, 'PAYMENT_CREATED', 'PENDING', 'CLIENT', 'API', 1000, 'USD', 0, now(), now())
+                    occurred_at, recorded_at)
+                values (?, ?, 1, 'PAYMENT_CREATED', 'PENDING', 'CLIENT', 'API', now(), now())
                 """, UUID.randomUUID(), paymentId);
         jdbc.update("""
-                insert into rejected_requests (id, actor_type, http_method, path, http_status, problem_type,
-                    occurred_at)
-                values (?, 'CLIENT', 'POST', '/api/v1/payments', 400, '/problems/validation-error', now())
-                """, UUID.randomUUID());
+                insert into provider_attempts (id, payment_id, attempt_no, outcome, provider_duration_ms,
+                    occurred_at, recorded_at)
+                values (?, ?, 1, 'SUCCEEDED', 120, now(), now())
+                """, UUID.randomUUID(), paymentId);
     }
 
     @ParameterizedTest(name = "{0} on {1}")
@@ -53,9 +53,9 @@ class AppendOnlyJournalIT {
         "UPDATE,   payment_events,    update payment_events set reason_code = 'x'",
         "DELETE,   payment_events,    delete from payment_events",
         "TRUNCATE, payment_events,    truncate payment_events",
-        "UPDATE,   rejected_requests, update rejected_requests set path = '/x'",
-        "DELETE,   rejected_requests, delete from rejected_requests",
-        "TRUNCATE, rejected_requests, truncate rejected_requests"
+        "UPDATE,   provider_attempts, update provider_attempts set provider_code = 'x'",
+        "DELETE,   provider_attempts, delete from provider_attempts",
+        "TRUNCATE, provider_attempts, truncate provider_attempts"
     })
     @DisplayName("001/AC-12: the database rejects changes to journal rows")
     void journalsAreAppendOnly(String operation, String table, String sql) {
