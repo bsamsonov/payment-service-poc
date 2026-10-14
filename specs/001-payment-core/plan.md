@@ -150,6 +150,8 @@ depend on `adapter..`; adapters do not depend on each other; generated `adapter.
 - ADR-0007 UUIDv7 identifiers generated in the application (PR A).
 - **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only audit log in the same transaction, the change
   only (no snapshot) + `sequence_no` guarded by a unique key, provider attempts in a separate log, reference tables,
-  rejected requests in the `AUDIT` log instead of a table, trigger now / DB roles as production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
+  rejected requests in the `AUDIT` log instead of a table (stdout; target retention set by the log platform: `AUDIT`
+  ≥ 12 months, application logs ~30 days; metric and JSON audit marker in 008, #23), trigger now / DB roles as
+  production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
   central store as future options.
 - ADR-0002 (stack) already covers PostgreSQL/Flyway/JPA/Testcontainers.
