@@ -15,9 +15,11 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
   plugin with the plan's options; generated sources excluded from Spotless, Error Prone/NullAway, SpotBugs, JaCoCo;
   ArchUnit layer rules from the plan (`allowEmptyShould(true)` until the packages exist).
   Verified by: `verify -Pci` green with the generated `PaymentsApi` compiled; ArchUnit test passes.
-- [x] T3 (AC-12) Migrations `V1`–`V3` (`currency varchar(3)` + `CHECK`, journal triggers) and JPA entities including
-  `jsonb` columns (Hibernate 7 JSON with Jackson 3 — fallback `FormatMapper` bean). Test first: `AppendOnlyJournalIT`
-  (`UPDATE`/`DELETE`/`TRUNCATE` rejected with SQLSTATE `42501` on both journals); entity round trip of a `jsonb` column.
+- [x] T3 (AC-12) Migrations `V1`–`V5` (reference tables, append-only guard, `payments`, `payment_events`,
+  `provider_attempts`) and JPA entities including the `jsonb` column (Hibernate 7 JSON with Jackson 3 — fallback
+  `FormatMapper` bean). Test first: `AppendOnlyJournalIT` (`UPDATE`/`DELETE`/`TRUNCATE` rejected with SQLSTATE `42501`
+  on both logs); `PersistenceMappingIT` (every column written); `SchemaConstraintsIT` (FKs, checks, unique sequence).
+  Reworked after the architecture review of the schema (data model in the spec).
 
 ## PR B — domain, journal, status applier (AC-10, AC-11, AC-14, AC-17)
 
@@ -27,9 +29,12 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
 - [ ] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.
   Test first: `RequestHasherTest` (key order, whitespace, nested `metadata`, different values → different hash).
 - [ ] T6 (AC-10, AC-11, AC-14) Ports and JPA adapters (`PaymentRepository`, `PaymentJournal`), `TraceContext` port +
-  `MicrometerTraceContext`, `PaymentStatusApplier` with `last_event_seq`, `@Version` and bounded retry.
-  Tests first: `PaymentStatusApplierIT` (sequence and snapshot, rollback on failed event insert, rejected and
-  conflicting duplicate journaled, identical duplicate not, two threads on one `PROCESSING` payment).
+  `MicrometerTraceContext`, `PaymentStatusApplier` with `sequence_no = max + 1`, `@Version`, retry on an optimistic
+  lock or sequence collision (bounded).
+  Tests first: `PaymentStatusApplierIT` (sequence, statuses and failure code, rollback on failed event insert, rejected
+  and conflicting duplicate journaled, identical duplicate not, two threads on one `PROCESSING` payment);
+  `ReferenceTablesIT` (every constant of `PaymentStatus`, `FailureCode`, `EventType`, `ActorType`, `EventSource`,
+  `ProviderOutcome` exists in its reference table).
 
 ## PR C — API: create and read payments (AC-1…AC-9, AC-13, AC-15)
 
@@ -44,9 +49,9 @@ If it grows past ~600 lines: T7–T8 and T9–T10 as two PRs.
   currency, non-integer amount: `19.99`, `"1999"`), `422` from `CurrencyPolicy` via `BusinessRuleViolation`;
   `metadata` limits — count (≤ 10) and value length (≤ 500) come from the generated `@Size`, key length (≤ 40) needs
   an explicit check (OpenAPI 3.0 cannot constrain map keys) — each over the limit → `400`;
-  `RejectedRequestRecorder` + `rejected_requests` adapter written by `ProblemDetailsHandler`.
-  Tests first: `PaymentRequestValidationTest` (slice; one case per `metadata` limit and per amount type),
-  `RejectedRequestsIT`.
+  `RejectedRequestAuditLog`: one `AUDIT` line per `400`/`422`, written by `ProblemDetailsHandler`.
+  Tests first: `PaymentRequestValidationTest` (slice; one case per `metadata` limit and per amount type; the `AUDIT`
+  line has field names and rule codes, no values).
 - [ ] T10 (AC-7, AC-8, AC-9) `GetPaymentQuery`, `GET /payments/{id}` (malformed id → `404`) and
   `GET /payments?externalReference=…` (≤ 20, newest first, missing parameter → `400`).
   Tests first: `GetPaymentIT`, `FindPaymentsByExternalReferenceIT`.
