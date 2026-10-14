@@ -31,22 +31,23 @@ stays in its last committed state).
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:
-- `V1__reference_tables.sql` — reference tables per spec (`code` PK + `description`), filled with the 001 values.
+- `V1__coded_value_domains.sql` — domains per spec (`text` + named `CHECK` of the 001 values, `COMMENT ON DOMAIN`).
 - `V2__append_only_guard.sql` — function `forbid_append_only_change()`, shared by both logs.
 - `V3__payments.sql` — `payments` per spec; index `(external_reference, created_at DESC)`.
 - `V4__payment_events.sql` — the audit log per spec; FK without cascade; `UNIQUE (payment_id, sequence_no)`; row and
   truncate triggers.
 - `V5__provider_attempts.sql` — the provider call log per spec; index on `payment_id`; the same triggers.
 
-Coded values are rows of reference tables referenced by FK; the Java enums mirror them, and an IT checks that every
-enum constant exists in its table (T6). Strings are `text` (`String` maps to it under `validate`), every constraint is
-named. JSON column (`metadata`): `jsonb` via Hibernate `@JdbcTypeCode(SqlTypes.JSON)`. The schema went through an
-architecture review before PR A was merged (reference tables, provider attempts apart from the audit log, no snapshot,
-no `rejected_requests` table).
-Flyway owns the schema; Hibernate runs with `spring.jpa.hibernate.ddl-auto=validate`, so a mismatch between the
-entities and the migrated schema (missing table/column, incompatible type) fails startup and every IT.
-Local DB: `compose.yaml` with `postgres:17` + `spring-boot-docker-compose` (dev only). Tests: Testcontainers
-`postgres:17` via a shared `@TestConfiguration` with `@ServiceConnection`; the existing context tests start using it.
+Coded values are domains; the Java enums are the source of the sets, and an IT checks that every enum constant is
+accepted by its domain (T6). An entity field on a domain column declares `@Column(columnDefinition = "<domain>")`:
+PgJDBC reports such a column as `DISTINCT <domain>`, and `validate` matches it by that name. Strings are `text`
+(`String` maps to it under `validate`), every constraint is named. JSON column (`metadata`): `jsonb` via Hibernate
+`@JdbcTypeCode(SqlTypes.JSON)`. The schema went through an architecture review before PR A was merged (coded values,
+provider attempts apart from the audit log, no snapshot, no `rejected_requests` table). Flyway owns the schema;
+Hibernate runs with `spring.jpa.hibernate.ddl-auto=validate`, so a mismatch between the entities and the migrated schema
+(missing table/column, incompatible type) fails startup and every IT. Local DB: `compose.yaml` with `postgres:17` +
+`spring-boot-docker-compose` (dev only). Tests: Testcontainers `postgres:17` via a shared `@TestConfiguration` with
+`@ServiceConnection`; the existing context tests start using it.
 
 ## Sequence
 ```mermaid
@@ -149,9 +150,9 @@ depend on `adapter..`; adapters do not depend on each other; generated `adapter.
 - ADR-0006 Contract-first API with generated interfaces (PR A).
 - ADR-0007 UUIDv7 identifiers generated in the application (PR A).
 - **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only audit log in the same transaction, the change
-  only (no snapshot) + `sequence_no` guarded by a unique key, provider attempts in a separate log, reference tables,
-  rejected requests in the `AUDIT` log instead of a table (stdout; target retention set by the log platform: `AUDIT`
-  ≥ 12 months, application logs ~30 days; metric and JSON audit marker in 008, #23), trigger now / DB roles as
-  production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and
-  central store as future options.
+  only (no snapshot) + `sequence_no` guarded by a unique key, provider attempts in a separate log, domains for coded
+  values (not reference tables), rejected requests in the `AUDIT` log instead of a table (stdout; target retention set
+  by the log platform: `AUDIT` ≥ 12 months, application logs ~30 days; metric and JSON audit marker in 008, #23),
+  trigger now / DB roles as production option, why not Envers/CDC/pgAudit/event sourcing, hash chain and central store
+  as future options.
 - ADR-0002 (stack) already covers PostgreSQL/Flyway/JPA/Testcontainers.

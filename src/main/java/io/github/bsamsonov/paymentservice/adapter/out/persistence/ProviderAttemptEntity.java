@@ -1,5 +1,6 @@
 package io.github.bsamsonov.paymentservice.adapter.out.persistence;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -23,6 +24,7 @@ class ProviderAttemptEntity implements Persistable<UUID> {
 
     private int attemptNo;
 
+    @Column(columnDefinition = "provider_outcome")
     private String outcome;
 
     private @Nullable Short providerHttpStatus;

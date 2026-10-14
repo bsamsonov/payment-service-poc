@@ -1,5 +1,6 @@
 package io.github.bsamsonov.paymentservice.adapter.out.persistence;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -23,12 +24,16 @@ class PaymentEventEntity implements Persistable<UUID> {
 
     private long sequenceNo;
 
+    @Column(columnDefinition = "payment_event_type")
     private String eventType;
 
+    @Column(columnDefinition = "payment_status")
     private @Nullable String fromStatus;
 
+    @Column(columnDefinition = "payment_status")
     private String toStatus;
 
+    @Column(columnDefinition = "failure_code")
     private @Nullable String failureCode;
 
     private @Nullable String reasonCode;

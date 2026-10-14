@@ -25,8 +25,6 @@ class SchemaConstraintsIT {
 
     private static final String CHECK_VIOLATION = "23514";
 
-    private static final String FOREIGN_KEY_VIOLATION = "23503";
-
     private static final String UNIQUE_VIOLATION = "23505";
 
     @Autowired
@@ -45,9 +43,9 @@ class SchemaConstraintsIT {
     }
 
     @ParameterizedTest(name = "status {0}, failure_code {1}")
-    @CsvSource({"DONE,, payments_status_fk", "FAILED, card_stolen, payments_failure_code_fk"})
-    void codedValuesMustExistInTheReferenceTables(String status, @Nullable String failureCode, String constraint) {
-        assertViolation(() -> insertPayment(status, failureCode), FOREIGN_KEY_VIOLATION, constraint);
+    @CsvSource({"DONE,, payment_status_values", "FAILED, card_stolen, failure_code_values"})
+    void codedValuesMustBelongToTheirDomain(String status, @Nullable String failureCode, String constraint) {
+        assertViolation(() -> insertPayment(status, failureCode), CHECK_VIOLATION, constraint);
     }
 
     @Test
@@ -76,8 +74,8 @@ class SchemaConstraintsIT {
         assertViolation(
                 () -> insertEvent(
                         paymentId, 1, "PAYMENT_CREATED", null, "PENDING", null, "CLIENT", "PROVIDER_RESPONSE"),
-                FOREIGN_KEY_VIOLATION,
-                "payment_events_actor_source_fk");
+                CHECK_VIOLATION,
+                "payment_events_actor_source");
     }
 
     @Test
