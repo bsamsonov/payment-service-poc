@@ -40,13 +40,9 @@ class PaymentEntity {
 
     private String status;
 
-    private long refundedAmount;
-
     private @Nullable String failureCode;
 
     private String requestHash;
-
-    private long lastEventSeq;
 
     // Set by AuditingEntityListener before the insert
     @CreatedDate
@@ -88,11 +84,9 @@ class PaymentEntity {
     }
 
     /** Copies the mutable state of the domain payment; each call is followed by a journal write. */
-    void updateState(String status, @Nullable String failureCode, long refundedAmount, long lastEventSeq) {
+    void updateState(String status, @Nullable String failureCode) {
         this.status = status;
         this.failureCode = failureCode;
-        this.refundedAmount = refundedAmount;
-        this.lastEventSeq = lastEventSeq;
     }
 
     UUID getId() {
@@ -127,20 +121,12 @@ class PaymentEntity {
         return status;
     }
 
-    long getRefundedAmount() {
-        return refundedAmount;
-    }
-
     @Nullable String getFailureCode() {
         return failureCode;
     }
 
     String getRequestHash() {
         return requestHash;
-    }
-
-    long getLastEventSeq() {
-        return lastEventSeq;
     }
 
     Instant getCreatedAt() {

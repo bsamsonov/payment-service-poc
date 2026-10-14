@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.bsamsonov.paymentservice.TestcontainersConfiguration;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -13,7 +12,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Entities match the Flyway schema (ddl-auto=validate) and jsonb columns round-trip as real JSON. */
+/** Entities match the Flyway schema (ddl-auto=validate) and every column is written where the schema expects it. */
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
 class PersistenceMappingIT {
@@ -25,7 +24,7 @@ class PersistenceMappingIT {
     private PaymentEventJpaRepository events;
 
     @Autowired
-    private RejectedRequestJpaRepository rejectedRequests;
+    private ProviderAttemptJpaRepository attempts;
 
     @Autowired
     private JdbcTemplate jdbc;
@@ -54,10 +53,8 @@ class PersistenceMappingIT {
         assertThat(loaded.getDescription()).isEqualTo("Order 42");
         assertThat(loaded.getMetadata()).containsExactlyInAnyOrderEntriesOf(Map.of("orderId", "42", "channel", "web"));
         assertThat(loaded.getStatus()).isEqualTo("PENDING");
-        assertThat(loaded.getRefundedAmount()).isZero();
         assertThat(loaded.getFailureCode()).isNull();
         assertThat(loaded.getRequestHash()).isEqualTo("a".repeat(64));
-        assertThat(loaded.getLastEventSeq()).isZero();
         assertThat(loaded.getCreatedAt()).isNotNull();
         assertThat(loaded.getUpdatedAt()).isNotNull();
         assertThat(loaded.getVersion()).isZero();
@@ -71,72 +68,58 @@ class PersistenceMappingIT {
         PaymentEntity saved = payments.save(new PaymentEntity(
                 id, 5000, "USD", "pm_card_chargeDeclined", "order-" + id, null, null, "PENDING", "c".repeat(64)));
 
-        saved.updateState("FAILED", "card_declined", 0, 2);
+        saved.updateState("FAILED", "card_declined");
         payments.save(saved);
 
         PaymentEntity loaded = payments.findById(id).orElseThrow();
         assertThat(loaded.getStatus()).isEqualTo("FAILED");
         assertThat(loaded.getFailureCode()).isEqualTo("card_declined");
-        assertThat(loaded.getLastEventSeq()).isEqualTo(2);
         assertThat(loaded.getVersion()).isEqualTo(1);
     }
 
     @Test
-    void eventDetailsAndRejectedRequestErrorFieldsRoundTripAsJsonb() {
+    void journalEntitiesWriteEveryColumn() {
         UUID paymentId = UUID.randomUUID();
         payments.save(new PaymentEntity(
                 paymentId, 1999, "USD", "pm_card_visa", "order-" + paymentId, null, null, "PENDING", "b".repeat(64)));
-        UUID eventId = UUID.randomUUID();
+        String traceId = "0af7651916cd43dd8448eb211c80319c";
         Instant now = Instant.now();
+        UUID eventId = UUID.randomUUID();
         events.save(new PaymentEventEntity(
                 eventId,
                 paymentId,
                 1,
                 "TRANSITION_REJECTED",
-                "SUCCEEDED",
                 "FAILED",
-                "PROVIDER",
-                null,
-                "PROVIDER_RESPONSE",
+                "FAILED",
+                "insufficient_funds",
                 "conflicting_duplicate",
-                null,
-                1999,
-                "USD",
-                0,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
-                null,
+                "PROVIDER",
+                "PROVIDER_RESPONSE",
+                traceId,
                 now,
-                now,
-                Map.of("current", "card_declined", "attempted", "insufficient_funds")));
-        UUID rejectedId = UUID.randomUUID();
-        rejectedRequests.save(new RejectedRequestEntity(
-                rejectedId,
-                null,
-                "CLIENT",
-                null,
-                "POST",
-                "/api/v1/payments",
-                400,
-                "/problems/validation-error",
-                List.of(Map.of("field", "amount", "rule", "NotNull")),
-                "order-" + paymentId,
                 now));
+        UUID attemptId = UUID.randomUUID();
+        attempts.save(new ProviderAttemptEntity(
+                attemptId, paymentId, 1, "DECLINED", (short) 402, "card_declined", "req_1", 120, traceId, now, now));
 
-        assertThat(events.findById(eventId).orElseThrow().getDetails())
-                .containsEntry("attempted", "insufficient_funds");
-        assertThat(rejectedRequests.findById(rejectedId).orElseThrow().getErrorFields())
-                .containsExactly(Map.of("field", "amount", "rule", "NotNull"));
-        assertThat(jdbc.queryForObject(
-                        "select error_fields -> 0 ->> 'rule' from rejected_requests where id = ?",
-                        String.class,
-                        rejectedId))
-                .isEqualTo("NotNull");
+        assertThat(jdbc.queryForMap(
+                        "select from_status, to_status, failure_code, reason_code, trace_id from payment_events"
+                                + " where id = ?",
+                        eventId))
+                .containsEntry("from_status", "FAILED")
+                .containsEntry("to_status", "FAILED")
+                .containsEntry("failure_code", "insufficient_funds")
+                .containsEntry("reason_code", "conflicting_duplicate")
+                .containsEntry("trace_id", traceId);
+        assertThat(jdbc.queryForMap(
+                        "select outcome, provider_http_status, provider_code, provider_request_id,"
+                                + " provider_duration_ms from provider_attempts where id = ?",
+                        attemptId))
+                .containsEntry("outcome", "DECLINED")
+                .containsEntry("provider_http_status", 402) // the driver reads smallint as Integer
+                .containsEntry("provider_code", "card_declined")
+                .containsEntry("provider_request_id", "req_1")
+                .containsEntry("provider_duration_ms", 120);
     }
 }
