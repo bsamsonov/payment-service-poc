@@ -11,6 +11,8 @@ without a model and copies the lane checklist; the `review-lane` agent judges th
   <round>/bundle/adr/                        — ADRs at the PR head, when any lane is on
 
 Usage: scripts/review/lanes.py <round-dir>
+       scripts/review/lanes.py --protected <base> <head> <main-ref>
+         reasons why the change base..head may not be an automatic fix (one per line; exit 1 if any) — fix.sh
 Env:   PR_REVIEW_LANES       auto (default) | none | comma-separated lanes to force (e.g. db,api)
        PR_REVIEW_LANE_TOOLS  1 (default) | 0 — run external tools (squawk, oasdiff, redocly); 0 in tests/offline
 """
@@ -514,9 +516,47 @@ def status_word(s: str) -> str:
     return {"A": "added", "M": "modified", "D": "deleted", "R": "renamed", "C": "copied", "T": "type changed"}.get(s, s)
 
 
+SPEC_PATHS = re.compile(r"^(specs/|openspec/|docs/adr/|api/)")
+MIGRATIONS = "src/main/resources/db/"
+TEST_REMOVED = re.compile(r"^\s*@(Test|ParameterizedTest|RepeatedTest|TestFactory|ArchTest)\b")
+
+
+def exists_at(rev: str, path: str) -> bool:
+    return subprocess.run(["git", "cat-file", "-e", f"{rev}:{path}"], capture_output=True).returncode == 0
+
+
+def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
+    """Why a change base..head must go to the owner instead of an automatic fix: it touches what the fixer may not
+    change — guards (rules, analyzers, CI, hooks, agent rules, review docs), the spec, ADRs or the API contract,
+    a migration that already exists on the base branch — or it weakens checks (suppressions, removed tests)."""
+    reasons = []
+    files = changed_files(base, head)
+    for status, path, old in files:
+        if GUARD_PATHS.search(path) or RULE_FILES.search(path):
+            reasons.append(f"`{path}` is a guard (rules, analyzers, CI, agent rules)")
+        elif SPEC_PATHS.search(path):
+            reasons.append(f"`{path}` is the spec, an ADR or the API contract")
+        elif path.startswith(MIGRATIONS) and exists_at(main_ref, old or path):
+            reasons.append(f"`{path}` is a migration that already exists on `{main_ref}`")
+        if status == "D" and path.startswith("src/test/"):
+            reasons.append(f"`{path}` (test) deleted")
+    added, removed = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
+    for path, lines in sorted(added.items()):
+        if GUARD_MARKER_PATHS.search(path):
+            reasons += [f"suppression added at `{path}:{n}`: `{t.strip()}`" for n, t in lines if SUPPRESSION_MARKERS.search(t)]
+    for path, lines in sorted(removed.items()):
+        if path.startswith("src/test/"):
+            reasons += [f"test removed in `{path}`: `{t.strip()}`" for t in lines if TEST_REMOVED.search(t)]
+    return reasons
+
+
 def main() -> None:
+    if len(sys.argv) == 5 and sys.argv[1] == "--protected":
+        reasons = protected_reasons(*sys.argv[2:5])
+        print("\n".join(reasons))
+        sys.exit(1 if reasons else 0)
     if len(sys.argv) != 2:
-        sys.exit("usage: lanes.py <round-dir>")
+        sys.exit("usage: lanes.py <round-dir> | lanes.py --protected <base> <head> <main-ref>")
     round_dir = Path(sys.argv[1]).resolve()
     if not (round_dir / "meta.json").is_file():
         sys.exit(f"[pr-review] ERROR: not a round directory: {round_dir}")
