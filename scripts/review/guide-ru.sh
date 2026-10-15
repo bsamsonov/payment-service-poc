@@ -5,6 +5,7 @@
 #
 # Usage: scripts/review/guide-ru.sh <round-dir> [--context-only]
 #   --context-only  build guide-context.md and stop (no model call)
+# Env: PR_REVIEW_GUIDE_RU_MODEL — model override (default: the agent's model, sonnet)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout
@@ -62,13 +63,15 @@ log "code excerpts: $round_rel/guide-context.md"
 agg_line=""
 [[ -f "$round_dir/aggregate.json" ]] && agg_line="
 Confirmed AI findings: \`$round_rel/aggregate.json\`"
-log "writing the Russian reading version (sonnet)"
+model=()
+[[ -n "${PR_REVIEW_GUIDE_RU_MODEL:-}" ]] && model=(--model "$PR_REVIEW_GUIDE_RU_MODEL")
+log "writing the Russian reading version (${PR_REVIEW_GUIDE_RU_MODEL:-sonnet})"
 (cd "$REPO_ROOT" && timeout "${PR_REVIEW_TIMEOUT:-1200}" claude \
   -p "Write the Russian reading version of the review guide of PR #$pr, round $round.
 Guide: \`$round_rel/guide.json\`
 Code excerpts and links: \`$round_rel/guide-context.md\`
 Bundle (only if an excerpt is not enough): \`$round_rel/bundle/\`$agg_line" \
-  --agent review-guide-ru \
+  --agent review-guide-ru "${model[@]}" \
   --output-format json \
   --permission-mode dontAsk \
   --strict-mcp-config \
