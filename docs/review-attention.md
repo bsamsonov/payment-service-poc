@@ -46,6 +46,9 @@ Ordered by cost of changing the decision later.
 - Work deferred to a later PR or spec — is it recorded where it will be picked up?
 - Test conventions (shared database, never-cleaned tables, unique fixtures) that later tests will copy.
 - New exceptions to rules (suppressed checks, excluded files).
+- Any change to architecture rules: `ModuleRules`, `HexagonRules`, `ArchitectureTest`, `TestConventionsTest`,
+  `archfixture/` — a widened allow-list, a removed or weakened rule, a new `allowEmptyShould`, a class made `public`
+  to satisfy H-06. Always show it: the coding agent is told to move code, never to change a rule.
 
 ### Minor
 - Health checks, logging, small coverage gaps that are cheap to close now.

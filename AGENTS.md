@@ -48,9 +48,18 @@ Integration tests (`*IT`) need Docker (Testcontainers).
   to make a build pass. Suppressions require a written justification.
 
 ## Architecture
-- Hexagonal (ports and adapters), package root `io.github.bsamsonov.paymentservice`:
-  `domain` (no Spring, no JPA), `application` (use cases, ports), `adapter.in.web`, `adapter.out.persistence`,
-  `adapter.out.stripe`, `config`. Rules are enforced by ArchUnit as layers appear.
+- Modules under the package root `io.github.bsamsonov.paymentservice`: `payment` now; `refund` (spec 006) and the
+  provider module `stripe` (spec 003) later. Only `PaymentServiceApplication` lives in the root package; a new module
+  needs the owner's decision.
+- Each domain module is hexagonal (ports and adapters), e.g. `payment.domain` (plain Java), `payment.application`
+  (use cases), `payment.application.port` (ports in domain terms), `payment.adapter.in.web`,
+  `payment.adapter.out.persistence`, `payment.config`. Each module owns its ports; there is no shared port package.
+- The rules are enforced by ArchUnit: `src/test/java/.../ArchitectureTest.java` (`ModuleRules` M-01…M-02,
+  `HexagonRules` H-01…H-12 per module, `TestConventionsTest` T-01). Every rule's `because` says where the code belongs.
+- **When an ArchUnit rule fails, move the code** to the place named in its `because`. Do not edit `ModuleRules`,
+  `HexagonRules`, `ArchitectureTest` or `archfixture/`, do not extend allow-lists, do not make an adapter class
+  `public`, do not add `allowEmptyShould`. If the move needs a new port, package, module or an exception to a rule,
+  stop and ask.
 - Every package is `@NullMarked` (JSpecify); nullable values are explicit `@Nullable`.
 - Constructor injection only. Records for DTOs and value objects.
 
