@@ -1,4 +1,4 @@
-package io.github.bsamsonov.paymentservice.adapter.out.persistence;
+package io.github.bsamsonov.paymentservice.payment.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;

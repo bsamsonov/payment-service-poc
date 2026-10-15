@@ -11,7 +11,8 @@ Every status change goes through `PaymentStatusApplier`. The use case controls t
 provider call" rule is visible in code and testable (AC-13).
 
 ## Components (packages and classes)
-Root `io.github.bsamsonov.paymentservice`; every package has `package-info.java` with `@NullMarked`.
+Module `io.github.bsamsonov.paymentservice.payment`; package names below are relative to it. Every package has
+`package-info.java` with `@NullMarked`.
 
 | Package | Classes | Notes |
 |---|---|---|
@@ -131,9 +132,7 @@ Traceability (see `specs/README.md`): every test that covers an AC carries the i
 `@DisplayName("001/AC-2: declined card returns 402")` (several: `"001/AC-10, 001/AC-14: …"`);
 `scripts/spec/check-ac-trace.sh` must pass for all 17 AC. The last commit of the last PR (D) sets `status: Implemented`.
 
-Architecture (ArchUnit, added now): `domain` depends on no Spring/JPA/Jackson/Hibernate; `application` does not
-depend on `adapter..`; adapters do not depend on each other; generated `adapter.in.web.api/model` used only in
-`adapter.in.web`; JPA entities only in `adapter.out.persistence`.
+Architecture: enforced by the module and hexagon ArchUnit rules (`ModuleRules`, `HexagonRules`, see `AGENTS.md`).
 
 ## Risks
 - **Hibernate 7 JSON mapping with Jackson 3** — Hibernate's JSON `FormatMapper` may need Jackson 2 or a custom

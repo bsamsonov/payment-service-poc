@@ -1,4 +1,4 @@
-package io.github.bsamsonov.paymentservice.adapter.out.persistence;
+package io.github.bsamsonov.paymentservice.payment.adapter.out.persistence;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
