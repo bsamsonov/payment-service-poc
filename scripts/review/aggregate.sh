@@ -2,11 +2,11 @@
 # Aggregate raw reviewer reports of a round with the review-aggregator subagent and render the results:
 #   aggregate.json — structured result (schema: aggregate.schema.json)
 #   report.md      — confirmed and rejected findings, reviewer stats
-#   guide.md       — guide for the human reviewer (posted as a PR comment)
 #   stats.tsv      — per reviewer: raw findings, confirmed findings
 #
 # Usage: scripts/review/aggregate.sh <round-dir> [--reuse]
 #   --reuse  do not call the aggregator again; re-render from logs/aggregator.json
+# The guide for the human reviewer is written by guide.sh from the same round.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout
@@ -55,7 +55,7 @@ jq 'if (.structured_output | type) == "object" then .structured_output
     else .result | sub("^[^{]*"; "") | sub("[^}]*$"; "") | fromjson end' \
   "$round_dir/logs/aggregator.json" >"$tmp" 2>/dev/null \
   || die "aggregator output is not valid JSON, see $round_rel/logs/aggregator.json"
-jq -e 'has("summary") and has("findings") and has("rejected") and has("must_review") and has("skim") and has("previous")
+jq -e 'has("findings") and has("rejected") and has("previous")
        and (.reviewers | type == "array" and length > 0)
        and all(.findings[]; has("id") and has("path") and has("line") and has("severity") and has("body") and has("sources"))
        and all(.reviewers[]; has("id") and has("raw_findings"))' \
@@ -91,31 +91,4 @@ jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$rou
   (.rejected[] | "- [\(.source)] \(.title) — \(.reason)")
 ' "$agg" >"$round_dir/report.md"
 
-jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$round_dir/quorum.json" '
-  def loc: "`\(.path):\(.line)`";
-  "## /pr-review guide — round \($round)\(if $mode == "delta" then " (changes since the previous round)" else "" end)\n",
-  (if $q[0].quorum then empty else "> **Degraded run**: failed reviewers: \($q[0].failed | join(", ")).\n" end),
-  "### What changed",
-  (.summary[] | "- \(.)"),
-  "",
-  "### Architect'"'"'s attention",
-  (if ((.attention // []) | length) == 0 then "- nothing flagged" else
-     "_If you have time for only three, take 1–3._",
-     (.attention | to_entries[] | "- [ ] **\(.key + 1). \(.value.title)** · `\(.value.category)` · \(.value | loc)\n  _Why it matters later:_ \(.value.why)\n  _Decide:_ \(.value.question)") end),
-  "",
-  "### Must review",
-  (if (.must_review | length) == 0 then "- nothing flagged" else
-     (.must_review | to_entries[] | "- [ ] **\(.key + 1).** \(.value | loc) — \(.value.risk)\n  _Ask yourself:_ \(.value.question)") end),
-  "",
-  "### Findings (posted as review comments)",
-  (if (.findings | length) == 0 then "- none" else
-     (.findings[] | "- [ ] **\(.id)** \(.severity)\(if .rule != "" then " · " + .rule else "" end) — \(.title) (\(loc))") end),
-  "",
-  (if (.previous | length) > 0 then "### Previous findings", (.previous[] | "- \(.id): \(.status) — \(.note)"), "" else empty end),
-  "### Can be skimmed",
-  (if (.skim | length) == 0 then "- nothing" else (.skim[] | "- \(.what) — \(.why)") end),
-  "",
-  "<sub>Reviewers: \($q[0].ok | join(", ")). Close each finding with a fix commit or a reply explaining why it is not a bug.</sub>"
-' "$agg" >"$round_dir/guide.md"
-
-log "aggregated: $(jq '.findings | length' "$agg") confirmed, $(jq '.rejected | length' "$agg") rejected → $round_rel/{report,guide}.md"
+log "aggregated: $(jq '.findings | length' "$agg") confirmed, $(jq '.rejected | length' "$agg") rejected → $round_rel/report.md"
