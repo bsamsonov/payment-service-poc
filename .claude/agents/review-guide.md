@@ -70,11 +70,16 @@ The user message gives the round directory and says which of the optional parts 
 - `bundle/product.md` — product scope and the roadmap of later specs.
 - `bundle/attention.md` — the owner's priorities, heuristics per category, lessons from past PRs.
 - `bundle/context.md` — project invariants and what CI already enforces.
+- `bundle/lanes/<lane>/facts.md` and `bundle/adr/` — specialist lanes (`db`, `api`, `boundaries`, `guards`) the diff
+  switched on: why, tool output (squawk, `oasdiff`, `redocly`), new dependencies between components and modules,
+  weakened checks. The manifest lists the lanes that ran.
 - `previous-guide.json` — delta mode only: the guide of the previous round.
 - Optional AI review results of the same head:
   - `raw/*.md` — reports of the individual reviewers. They are a main source of candidates. Read with special care
     whatever a reviewer raised as speculative, a trade-off or a design question: such points often are decisions the
-    owner wants to make himself.
+    owner wants to make himself. Lane reports (`raw/lane-*.md`) are the strongest source: a finding of kind
+    `needs-decision` is a structural choice no document settles — make it an `attention` item unless it is minor,
+    and name the lane and checklist id in `checked`.
   - `aggregate.json` — `findings` (confirmed, already posted as PR comments: do not repeat them, refer by id when an
     item builds on one) and `rejected` with reasons. A reason like "speculative" or "design decision, not a defect"
     marks a candidate for you, not a closed question.
