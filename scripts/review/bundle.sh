@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Build a review bundle for a pull request:
-#   .review/<pr>/<round>/bundle/{manifest.md,diff.patch,files/,checklist.md,context.md,attention.md,spec/,previous-findings.md}
+#   .review/<pr>/<round>/bundle/{manifest.md,diff.patch,files/,checklist.md,context.md,attention.md,product.md,
+#                                signals.md,spec/,previous-findings.md}
 # Prints the round directory on stdout.
 #
 # Usage: scripts/review/bundle.sh <pr> [--delta]
@@ -63,8 +64,16 @@ for pair in "docs/review-checklist.md:checklist.md" "docs/review-context.md:cont
   src="${pair%%:*}" dst="${pair##*:}"
   git show "$head_sha:$src" >"$bundle/$dst" 2>/dev/null || die "$src not found at ${head_sha:0:7}"
 done
-# Optional: heuristics for the "Architect's attention" section (older PR heads may not have the file).
-git show "$head_sha:docs/review-attention.md" >"$bundle/attention.md" 2>/dev/null || rm -f "$bundle/attention.md"
+# Optional inputs of the review guide: heuristics and the product roadmap. A branch cut before they were added falls
+# back to the base branch.
+for pair in "docs/review-attention.md:attention.md" "docs/product.md:product.md"; do
+  src="${pair%%:*}" dst="${pair##*:}"
+  git show "$head_sha:$src" >"$bundle/$dst" 2>/dev/null \
+    || git show "origin/$base_ref:$src" >"$bundle/$dst" 2>/dev/null \
+    || rm -f "$bundle/$dst"
+done
+# Facts about the whole PR diff (not the delta): size by area, sensitive paths, markers.
+"$SCRIPTS_DIR/signals.sh" "$round_dir/pr.patch" >"$bundle/signals.md"
 
 # Feature spec: from the branch name (feat/NNN-...) or from specs touched by the PR.
 spec_id=""
@@ -124,6 +133,8 @@ jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \
   fi
   echo "- \`checklist.md\`, \`context.md\`"
   [[ -f "$bundle/attention.md" ]] && echo "- \`attention.md\` — heuristics for the Architect's attention section"
+  [[ -f "$bundle/product.md" ]] && echo "- \`product.md\` — product scope and the roadmap of later specs"
+  echo "- \`signals.md\` — facts computed from the whole PR diff: size by area, sensitive paths, markers"
   [[ -d "$bundle/spec" ]] && echo "- \`spec/\` — $(ls "$bundle/spec" | tr '\n' ' ')"
   [[ -f "$bundle/previous-findings.md" ]] && echo "- \`previous-findings.md\`"
   echo
