@@ -35,6 +35,12 @@ Integration tests (`*IT`) need Docker (Testcontainers).
    (`specs/README.md`, Lifecycle).
 5. Do not implement anything listed under a spec's non-goals. Do not guess answers to open questions — ask.
 
+## Code changes
+- **Touch only what the task requires.** No drive-by refactoring, renaming, reformatting or "improvements"
+  outside the task's scope, even if they look obviously better — mention them as a follow-up instead.
+- **Simplest code that meets the requirements.** Optimize for the reader: obvious control flow, clear names,
+  no clever tricks, speculative abstractions or unused flexibility.
+
 ## Git
 - Conventional Commits: `<type>(<scope>): <subject>` (≤ 72 chars), types: feat fix docs style refactor perf test
   build ci chore revert. Body explains *why* when not obvious.
