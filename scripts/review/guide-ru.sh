@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Russian reading version of the review guide for the owner (not posted to the PR):
 #   guide-context.md — code excerpt and GitHub link for every attention and must_review item (no model)
-#   guide.ru.md      — written by the review-guide-ru subagent (sonnet) from guide.json and guide-context.md
+#   guide.ru.md      — written by the review-guide-ru subagent (opus) from guide.json and guide-context.md
 #
 # Usage: scripts/review/guide-ru.sh <round-dir> [--context-only]
 #   --context-only  build guide-context.md and stop (no model call)
-# Env: PR_REVIEW_GUIDE_RU_MODEL — model override (default: the agent's model, sonnet)
+# Env: PR_REVIEW_GUIDE_RU_MODEL — model override (default: the agent's model, opus)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout
@@ -65,7 +65,7 @@ agg_line=""
 Confirmed AI findings: \`$round_rel/aggregate.json\`"
 model=()
 [[ -n "${PR_REVIEW_GUIDE_RU_MODEL:-}" ]] && model=(--model "$PR_REVIEW_GUIDE_RU_MODEL")
-log "writing the Russian reading version (${PR_REVIEW_GUIDE_RU_MODEL:-sonnet})"
+log "writing the Russian reading version (${PR_REVIEW_GUIDE_RU_MODEL:-opus})"
 (cd "$REPO_ROOT" && timeout "${PR_REVIEW_TIMEOUT:-1200}" claude \
   -p "Write the Russian reading version of the review guide of PR #$pr, round $round.
 Guide: \`$round_rel/guide.json\`

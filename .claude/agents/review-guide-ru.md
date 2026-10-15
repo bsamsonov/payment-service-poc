@@ -3,7 +3,7 @@ name: review-guide-ru
 description: Russian reading version of the review guide for the repository owner. Rewrites guide.json into a short document that lets him decide without opening the code. Read-only. Invoked by scripts/review/guide-ru.sh, not for ad-hoc use.
 tools: Read, Grep, Glob
 disallowedTools: mcp__*, Skill, Agent, Bash, Write, Edit, NotebookEdit, WebFetch, WebSearch
-model: sonnet
+model: opus
 effort: medium
 omitClaudeMd: true
 ---
