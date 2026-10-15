@@ -1,7 +1,7 @@
 ---
 name: pr-review
-description: Multi-model AI review of a pull request — checklist reviewer, several bug-hunting models, specialist lanes (database, API contract, module boundaries, weakened checks) switched on by the diff, verified aggregation, inline PR comments, then the review guide for the human (/review-guide). Use when the user says "/pr-review <PR>", "review PR N", "run the AI review", "second review round", "re-review after fixes".
-argument-hint: "<pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish] [--lanes=<list> | --no-lanes] [--skip=<ids>] [--only=<ids>]"
+description: Multi-model AI review of a pull request — checklist reviewer, several bug-hunting models, specialist lanes (database, API contract, module boundaries, weakened checks) switched on by the diff, verified aggregation, automatic fix of the confirmed findings (one commit each, then one delta round), inline PR comments, then the review guide for the human (/review-guide). Use when the user says "/pr-review <PR>", "review PR N", "run the AI review", "second review round", "re-review after fixes".
+argument-hint: "<pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish] [--lanes=<list> | --no-lanes] [--skip=<ids>] [--only=<ids>] [--no-fix]"
 ---
 
 # /pr-review
@@ -30,32 +30,46 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    diff must succeed, counting only reviewers that are on; otherwise exit code 3.
 3. `aggregate.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
    `report.md` (with the lanes and why they were switched on), `stats.tsv`.
-4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
+4. `fix.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
+   medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. The fix is kept only if
+   `lanes.py --protected` passes (no guards, spec, ADRs, API contract, migrations from the base branch, no
+   suppressions or removed tests), the commit hooks accept it and the fast check is green; one commit
+   `fix(<scope>): … (R<n>-F<k>)` per finding, then a fast-forward push → `fixes.json` (`fixed` / `not_fixed` /
+   `owner`). Runs only with publication; skipped when the PR head moved or the PR comes from a fork; off with
+   `--no-fix` or `fixer off`.
+5. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
    `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, then
    places to read line by line, out-of-scope changes, findings, what to skim), plus two Russian documents for the
    owner that are not posted: `guide.ru.md` (reading version) and `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
    not stop publication of the findings.
-5. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide.
+6. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide; each comment
+   says "Auto-fixed in `<sha>`" or why it was not fixed. Threads stay open: the owner checks and resolves them.
+7. If fixes were pushed: one more round `pr-review.sh <pr> --delta --no-fix` over the fix commits (confirms the
+   fixes, catches regressions; never fixes again, so it cannot loop).
 
 ## Steps
 
 1. Parse arguments: PR number (required; if missing, use the PR of the current branch:
    `gh pr view --json number -q .number`), flags `--delta`, `--allow-degraded`, `--no-publish`, `--skip=<ids>`,
-   `--only=<ids>`. "Without glm" → `--skip=glm`; "switch glm off for good" → add `glm off` to `.review/reviewers.local`.
+   `--only=<ids>`, `--no-fix`. "Without glm" → `--skip=glm`; "switch glm off for good" → add `glm off` to `.review/reviewers.local`.
    If this PR already has a round in `.review/<pr>/` and the user did not say otherwise, use `--delta`.
-2. Run the pipeline **in the background** (it takes 5–20 minutes) and wait for the notification:
+2. Run the pipeline **in the background** (5–20 minutes; with fixes and the delta round over them up to about 40) and wait for the notification:
    `scripts/review/pr-review.sh <pr> [flags]` with `run_in_background: true`. Run it from a checkout of `main`
    (prompts and scripts come from the working tree; the script warns when they differ from `origin/main`).
    Do not read raw reports while it runs; do not run reviewers yourself.
 3. On exit code 3 (no quorum): show the failed reviewers and the last lines of their `logs/<id>.err`; ask the user
    whether to fix the cause or re-run with `--allow-degraded`. Do not continue on your own.
-4. On success: read only `guide.md` and the last block of the script output. Report to the user in at most
+4. On success: read only `guide.md` and the last block of the script output. When fixes were pushed, the output
+   holds two rounds: the first (findings, `fixes:` line) and the delta round over the fixes — report both, the
+   guide of the delta round is the current one. Report to the user in at most
    10 lines: number of findings by severity, the top three Architect's attention items, the top places to read,
    links to the posted review and guide, the full paths of `guide.ru.md` and `walkthrough.ru.md`, failed reviewers if any. If the guide failed, say so and offer
    `/review-guide <pr>`.
-5. Closing findings is the user's decision. When asked to fix a finding: fix it in a separate commit
-   (`fix(<scope>): …`) and reply in the thread. When the user decides it is not a bug: reply with the reason.
-   Then the next round is `/pr-review <pr> --delta`.
+5. Confirmed findings are fixed by the pipeline (`fix.sh` above); report how many were fixed and which are left
+   (`fixes.json`, reasons). The user resolves every thread, also the auto-fixed ones. For a finding left to the
+   user: when asked to fix it, fix it in a separate commit (`fix(<scope>): …`) and reply in the thread; when the
+   user decides it is not a bug, reply with the reason. Then the next round is `/pr-review <pr> --delta`.
+   Remind the user to pull the PR branch: the fix commits were pushed by the pipeline.
 
 ## Questions about a round
 
@@ -71,13 +85,15 @@ After a run the user often asks follow-up questions in the same session. Answer 
 | What was confirmed, what rejected and why | `report.md`; structured: `aggregate.json` (`findings`, `rejected[].reason`, `previous`) |
 | Which `needs-decision` became Architect's attention | `aggregate.json` `rejected` with "design decision" → `guide.md` / `guide.json` `attention` |
 | Time, cost, found/confirmed per reviewer | `stats.tsv` (header row; columns below); raw usage: `logs/<id>.json` |
+| What the auto-fix did: fixed (commit), not fixed, left to the owner, and why; push result | `fixes.json`; fixer logs `logs/fixer-<F>.{json,err,verify.log,commit.log}` |
 | What is still open after the round | `open-findings.json` |
 | What the reviewers saw | `bundle/manifest.md`, `meta.json` (`base_ref`, `diff_from`, `head_sha`, `mode`) |
 
 `stats.tsv` columns: `pr round reviewer found confirmed level status seconds cost_usd rejected decisions drift
 needs_decision confirmed_ids`; `status` is `ok`, `failed` or `skipped` (`skipped:disabled` — switched off);
 `decisions` — findings rejected as design decisions (they go to the owner); `drift` / `needs_decision` — kinds of
-findings in a lane's raw report; the `aggregator` row sums the round. OpenCode reviewers report no cost.
+findings in a lane's raw report; the `aggregator` row sums the round; the `fixer` row: found = findings tried, confirmed = fixed, rejected = not
+fixed, decisions = left to the owner. OpenCode reviewers report no cost.
 
 ## Notes
 
