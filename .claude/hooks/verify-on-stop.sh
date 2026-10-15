@@ -24,7 +24,9 @@ fi
 
 {
   echo "Fast check failed (./mvnw verify -DskipITs -Djacoco.skip=true). Fix before finishing:"
-  grep -E "ERROR|FAIL|expected|but was" "$log" | head -40
+  # ArchUnit prints the rule (with its "because" hint) on an ERROR line and each violating class, method or field,
+  # with its source line, on the following lines; keep both so the fix can be made without rerunning the build.
+  grep -E "ERROR|FAIL|expected|but was|^(Class|Method|Field|Constructor|Cycle detected)|\.java:[0-9]+\)" "$log" | grep -vE "^[[:space:]]+at " | head -60
 } >&2
 rm -f "$log"
 exit 2
