@@ -2,6 +2,7 @@
 # Write the guide for the human reviewer with the review-guide subagent:
 #   guide.json — structured result (schema: guide.schema.json)
 #   guide.md   — rendered guide (render-guide.jq), posted as a PR comment by publish.sh
+#   component-map.md — components touched by the reviewed range (component-map.py, no model); a section of guide.md
 #   guide.ru.md, walkthrough.ru.md — Russian reading version and code walkthrough for the owner, not posted
 #                (guide-ru.sh, opus)
 #
@@ -100,11 +101,20 @@ jq -e 'has("summary") and has("attention") and has("must_review") and has("out_o
   "$tmp" >/dev/null || die "review-guide JSON misses required fields, see $round_rel/guide.json.tmp"
 mv "$tmp" "$round_dir/guide.json"
 
+# Component map: built from git objects, not by a model. It is a reading aid, so a failure must not fail the guide.
+map_file="$round_dir/component-map.md"
+if ! (cd "$REPO_ROOT" && python3 "$SCRIPTS_DIR/component-map.py" \
+        "$(jq -r .diff_from "$round_dir/meta.json")" "$(jq -r .head_sha "$round_dir/meta.json")") \
+      >"$map_file" 2>"$round_dir/logs/component-map.err"; then
+  log "WARNING: component map failed, the guide goes without it; see $round_rel/logs/component-map.err"
+  : >"$map_file"
+fi
+
 agg=/dev/null quorum=/dev/null
 [[ -f "$round_dir/aggregate.json" ]] && agg="$round_dir/aggregate.json"
 [[ -f "$round_dir/quorum.json" ]] && quorum="$round_dir/quorum.json"
 jq -r --arg round "$round" --arg mode "$mode" --slurpfile agg "$agg" --slurpfile q "$quorum" \
-  -f "$SCRIPTS_DIR/render-guide.jq" "$round_dir/guide.json" >"$round_dir/guide.md"
+  --rawfile map "$map_file" -f "$SCRIPTS_DIR/render-guide.jq" "$round_dir/guide.json" >"$round_dir/guide.md"
 
 log "guide: $(jq '.attention | length' "$round_dir/guide.json") attention item(s)," \
     "$(jq '.must_review | length' "$round_dir/guide.json") place(s) to read → $round_rel/guide.md"

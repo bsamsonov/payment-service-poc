@@ -17,7 +17,9 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
 3. `aggregate.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
    `report.md`, `stats.tsv`.
 4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
-   `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, then
+   `aggregate.json` → `guide.json`, `guide.md` (opens with the **Component map** — Mermaid diagrams of the
+   components, their classes and dependencies with the touched ones highlighted and the classes still planned in
+   `plan.md` dashed, built by `component-map.py` from git, no model involved — then **Architect's attention** — up to 7 hard-to-reverse decisions, then
    places to read line by line, out-of-scope changes, findings, what to skim), plus two Russian documents for the
    owner that are not posted: `guide.ru.md` (reading version) and `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
    not stop publication of the findings.

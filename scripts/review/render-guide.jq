@@ -1,6 +1,7 @@
 # Renders guide.md from guide.json (schema: guide.schema.json) and, when the round has one, aggregate.json.
 # Usage: jq -r --arg round N --arg mode full|delta --slurpfile agg <aggregate.json or /dev/null>
-#           --slurpfile q <quorum.json or /dev/null> -f render-guide.jq guide.json
+#           --slurpfile q <quorum.json or /dev/null> --rawfile map <component-map.md, may be empty>
+#           -f render-guide.jq guide.json
 # The top three attention items are expanded; the rest are one line each plus the question.
 def loc: "`\(.path):\(.line)`";
 def full($n):
@@ -23,6 +24,7 @@ def short($n):
      "> **Degraded AI review**: failed reviewers: \($quorum.failed | join(", ")).\n" else empty end),
   "### What changed",
   (.summary[] | "- \(.)"),
+  (if ($map | test("\\S")) then "", "### Component map", "", ($map | rtrimstr("\n")) else empty end),
   "",
   "### Architect's attention",
   (if (.attention | length) == 0 then "- no decision in this PR needs your judgement"
