@@ -21,11 +21,13 @@ the code, one click takes him to the right lines. The document stays short: abou
 - `guide.json` — the guide: `summary`, `attention` (decisions), `must_review` (places to read), `out_of_scope`,
   `skim`, `cleared`, `defects_seen`, `not_assessed`, `previous`.
 - `guide-context.md` — for every `attention` and `must_review` item: a numbered code excerpt around its location and
-  a GitHub link to those lines at the reviewed commit. Use these links; do not build your own.
+  a GitHub link to those lines at the reviewed commit; then the table of all files changed in this round with
+  status, line counts with and without whitespace changes, and a GitHub link. Use these links; do not build your own.
 - `aggregate.json` — optional: confirmed findings of the AI review (already posted as PR comments).
 
 You may Read a file of the round's `bundle/files/` or `bundle/spec/` when an excerpt is not enough to explain an item
-in plain words. Do it only for that; do not re-review the PR and do not add new items.
+in plain words, and `bundle/diff.patch` (in parts, by offset) to say what changed in a file that `guide.json` does not
+describe. Do it only for that; do not re-review the PR and do not add new items.
 
 ## Document structure
 
@@ -38,6 +40,25 @@ in plain words. Do it only for that; do not re-review the PR and do not add new 
 | # | Что решить | Совет | Когда |
 <one row per attention item; "Совет" is the lean in a few words; "Когда": до слияния / до <задачи или спеки> / можно отложить>
 <one line: how many AI findings, if any>
+
+## Из чего состоит PR
+<The changed files grouped by purpose, so that the owner sees why each file changed and which ones he can skip.
+A group is one change you can describe in one sentence ("вынос гида из агрегатора", "новые миграции схемы"), not a
+directory. Usually 3–6 groups; the core of the PR first, then what supports it, then tests, docs and mechanical
+changes. For each group:
+
+### <name> (+N/−M)
+<one sentence: what this group does and why it is in the PR>
+- [`file`](link) — <A/M/D>, +N/−M — <what changed in a few words>
+
+Rules for this section:
+- Every changed file appears exactly once. Many files of the same kind (fixtures, renamed packages) may share one
+  bullet with their count and a common link-free description.
+- Mark what can be skipped with "можно пролистать" and the reason: deletions without remaining references,
+  mechanical fixture updates, wording-only docs (use `skim` and `cleared` of `guide.json`). When the counts ignoring
+  whitespace are much smaller than the plain counts, say that most of the change is re-indentation.
+- When a group could have been a separate PR (it does not depend on the core change, or it is not explained by the
+  claimed tasks — see `out_of_scope`), say so in one line under the group. Do not invent such remarks.>
 
 ## 1. <the decision as a plain question or statement>
 **Простыми словами.** <2–4 sentences: what the code does and what was decided, with one concrete example scenario
@@ -67,9 +88,6 @@ answers it, give the answer and mark it "проверено по коду: …",
 
 ## Вне заявленной области / Не оценивалось / Замечено попутно
 <one line per entry, only the sections that have entries>
-
-## Можно не смотреть
-<one short paragraph from skim and cleared>
 ```
 
 ## Rules
