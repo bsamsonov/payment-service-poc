@@ -15,6 +15,29 @@ require() {
   done
 }
 
+# Reviewer configuration as lines `<id> <level> <on|off>`: scripts/review/reviewers.conf, then the local override
+# .review/reviewers.local (`<id> on|off`), then PR_REVIEW_SKIP (comma- or space-separated ids switched off for one run).
+# Ids missing from the file get level L3 for `lane-*` and `?` otherwise.
+# PR_REVIEW_LOCAL_CONFIG points to another local override (tests).
+reviewer_config() {
+  local local_file="${PR_REVIEW_LOCAL_CONFIG:-$REVIEW_ROOT/reviewers.local}"
+  [[ -f "$local_file" ]] || local_file=/dev/null
+  awk -v skip="${PR_REVIEW_SKIP:-}" '
+    function lvl(id) { return id ~ /^lane-/ ? "L3" : "?" }
+    /^[[:space:]]*(#|$)/ { next }
+    FILENAME == ARGV[1] { if (!($1 in level)) order[++n] = $1; level[$1] = $2; on[$1] = $3; next }
+    { if (!($1 in level)) { order[++n] = $1; level[$1] = lvl($1) } on[$1] = $NF }
+    END {
+      k = split(skip, s, /[ ,]+/)
+      for (i = 1; i <= k; i++) if (s[i] != "") {
+        if (!(s[i] in level)) { order[++n] = s[i]; level[s[i]] = lvl(s[i]) }
+        on[s[i]] = "off"
+      }
+      for (i = 1; i <= n; i++) print order[i], level[order[i]], (on[order[i]] == "off" ? "off" : "on")
+    }
+  ' "$SCRIPTS_DIR/reviewers.conf" "$local_file"
+}
+
 # Highest round number used by a PR (complete or not), or 0.
 last_round_number() {
   local dir="$REVIEW_ROOT/$1"
