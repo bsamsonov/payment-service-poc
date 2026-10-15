@@ -84,6 +84,12 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
   CI (`scripts/spec/check-ac-trace.sh`) already checks that ids exist and that every AC of an `Implemented` spec has a
   test; review whether the test asserts what the AC says.
 
+## Code changes
+- **Touch only what the task requires.** No drive-by refactoring, renaming, reformatting or "improvements"
+  outside the task's scope, even if they look obviously better — mention them as a follow-up instead.
+- **Simplest code that meets the requirements.** Optimize for the reader: obvious control flow, clear names,
+  no clever tricks, speculative abstractions or unused flexibility.
+
 ## Process facts useful for review
 - Features come from `specs/NNN-name/{spec,plan,tasks}.md`; non-goals in the spec must not be implemented.
 - A spec is living until its feature PR merges (the last commit sets `Implemented`), then frozen; later behavior
