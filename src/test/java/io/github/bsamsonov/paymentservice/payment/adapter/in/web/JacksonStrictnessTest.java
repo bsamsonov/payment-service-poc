@@ -1,9 +1,9 @@
-package io.github.bsamsonov.paymentservice.adapter.in.web;
+package io.github.bsamsonov.paymentservice.payment.adapter.in.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.github.bsamsonov.paymentservice.adapter.in.web.model.CreatePaymentRequest;
+import io.github.bsamsonov.paymentservice.payment.adapter.in.web.model.CreatePaymentRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

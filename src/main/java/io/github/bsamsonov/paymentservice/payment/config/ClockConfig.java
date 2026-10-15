@@ -1,4 +1,4 @@
-package io.github.bsamsonov.paymentservice.config;
+package io.github.bsamsonov.paymentservice.payment.config;
 
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
