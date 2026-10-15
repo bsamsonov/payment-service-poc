@@ -2,7 +2,8 @@
 # Write the guide for the human reviewer with the review-guide subagent:
 #   guide.json — structured result (schema: guide.schema.json)
 #   guide.md   — rendered guide (render-guide.jq), posted as a PR comment by publish.sh
-#   guide.ru.md — Russian reading version for the owner, not posted (guide-ru.sh, opus)
+#   guide.ru.md, walkthrough.ru.md — Russian reading version and code walkthrough for the owner, not posted
+#                (guide-ru.sh, opus)
 #
 # Works with or without an AI review round. Uses raw/*.md and aggregate.json of the round when they exist.
 #
@@ -10,7 +11,7 @@
 #   <pr>        use the latest round of the current PR head; if there is none, build a bundle (bundle.sh, full diff)
 #   <round-dir> a round directory built by bundle.sh (this is how pr-review.sh calls it)
 #   --reuse     do not call the agent again; re-render from logs/guide.json
-#   --no-ru     skip the Russian reading version
+#   --no-ru     skip the Russian documents
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout gh
@@ -108,6 +109,6 @@ jq -r --arg round "$round" --arg mode "$mode" --slurpfile agg "$agg" --slurpfile
 log "guide: $(jq '.attention | length' "$round_dir/guide.json") attention item(s)," \
     "$(jq '.must_review | length' "$round_dir/guide.json") place(s) to read → $round_rel/guide.md"
 if [[ "$ru" == true ]]; then
-  "$SCRIPTS_DIR/guide-ru.sh" "$round_dir" || log "WARNING: Russian reading version failed; guide.md is ready"
+  "$SCRIPTS_DIR/guide-ru.sh" "$round_dir" || log "WARNING: Russian documents failed; guide.md is ready"
 fi
 echo "$round_dir"
