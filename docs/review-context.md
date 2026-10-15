@@ -10,9 +10,19 @@ read-only) call our REST API with JWTs; we charge cards through Stripe (test mod
 Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resilience4j, Spring Security.
 
 ## Architecture
-- Hexagonal, root package `io.github.bsamsonov.paymentservice`:
-  `domain` (pure Java: no Spring, no JPA), `application` (use cases and ports), `adapter.in.web`,
-  `adapter.out.persistence`, `adapter.out.stripe`, `config`. Dependencies point inwards only.
+- Modules under the root package `io.github.bsamsonov.paymentservice`: `payment` now, `refund` and `stripe` later;
+  only the application class lives in the root. Each domain module is hexagonal: `<module>.domain` (pure Java: no
+  Spring, no JPA), `<module>.application` (use cases), `<module>.application.port` (the module's own ports),
+  `<module>.adapter.in.web`, `<module>.adapter.out.persistence`, `<module>.config`. Dependencies point inwards only.
+- Already enforced by ArchUnit (do not report; `ArchitectureTest`): M-01 every class in a module, M-02 no cycles
+  between modules; per module H-01 domain depends only on itself, `java..` and JSpecify, H-02 application without
+  adapters, config and web/data/JPA/JSON types, H-03 ports only in domain terms, H-04 inbound adapters call use cases,
+  not ports, H-05 adapters independent of each other, H-06 adapter classes not `public` (except generated
+  `web.api`/`web.model`), H-07 generated API types only in `adapter.in.web`, H-08 no hand-written request mappings,
+  H-09 JPA/Hibernate only in `adapter.out.persistence`, H-10 controllers only in `adapter.in.web`, H-11 nothing
+  depends on `config`, H-12 no cycles between layers; T-01 `*Test` without Spring context or Testcontainers. Rules
+  still marked `allowEmptyShould(true)` have nothing to check yet; report a missing removal when the PR adds the
+  package.
 - Constructor injection only; records for DTOs and value objects.
 - Null safety: every package is `@NullMarked` (JSpecify); nullable values are explicit `@Nullable`.
 - Already enforced by CI (do not report): formatting, Error Prone/NullAway, field injection, `System.out`,
