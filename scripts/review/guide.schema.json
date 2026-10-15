@@ -1,0 +1,249 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "attention",
+    "must_review",
+    "out_of_scope",
+    "skim",
+    "cleared",
+    "defects_seen",
+    "not_assessed",
+    "previous"
+  ],
+  "properties": {
+    "summary": {
+      "type": "array",
+      "description": "What the PR changes, 3-5 short lines.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "attention": {
+      "type": "array",
+      "description": "Architect's attention: at most 7 decisions for the owner, most important first. May be empty.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "category",
+          "path",
+          "line",
+          "decision",
+          "why_later",
+          "affects",
+          "options",
+          "lean",
+          "checked",
+          "verify",
+          "question",
+          "decide_by"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "The decision as a choice that was made."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "irreversible",
+              "architecture",
+              "precedent",
+              "minor"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path relative to the repository root."
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Line in the post-change file."
+          },
+          "decision": {
+            "type": "string",
+            "description": "What the PR fixes in place. A fact."
+          },
+          "why_later": {
+            "type": "string",
+            "description": "What becomes expensive to change and when it bites."
+          },
+          "affects": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Spec or task ids."
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "2-3 alternatives with their cost."
+          },
+          "lean": {
+            "type": "string",
+            "description": "Preferred option and the deciding reason, or what it depends on."
+          },
+          "checked": {
+            "type": "string",
+            "description": "Facts confirmed in code or documents, with path:line."
+          },
+          "verify": {
+            "type": "string",
+            "description": "Cheapest remaining check for the owner, or empty."
+          },
+          "question": {
+            "type": "string"
+          },
+          "decide_by": {
+            "type": "string",
+            "description": "before_merge | before:<task or spec> | can_wait"
+          }
+        }
+      }
+    },
+    "must_review": {
+      "type": "array",
+      "description": "At most 5 places to read line by line, ordered by risk.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "line",
+          "risk",
+          "question"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Start of the region in the post-change file."
+          },
+          "risk": {
+            "type": "string",
+            "description": "What can go wrong there."
+          },
+          "question": {
+            "type": "string",
+            "description": "What to ask oneself while reading."
+          }
+        }
+      }
+    },
+    "out_of_scope": {
+      "type": "array",
+      "description": "Changes that neither the claimed tasks nor the PR description explains.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "note"
+        ],
+        "properties": {
+          "what": {
+            "type": "string",
+            "description": "Paths or a group of paths."
+          },
+          "note": {
+            "type": "string",
+            "description": "What changed and why it looks unrelated."
+          }
+        }
+      }
+    },
+    "skim": {
+      "type": "array",
+      "description": "Files or groups that can be skimmed, with the reason.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "why"
+        ],
+        "properties": {
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cleared": {
+      "type": "array",
+      "description": "Sensitive paths from signals.md that need no decision, with the reason.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "what",
+          "why"
+        ],
+        "properties": {
+          "what": {
+            "type": "string"
+          },
+          "why": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "defects_seen": {
+      "type": "array",
+      "description": "Possible defects noticed in passing, one line each with path:line. Not verified here.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "not_assessed": {
+      "type": "array",
+      "description": "What was not read or could not be judged, and missing inputs.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "previous": {
+      "type": "array",
+      "description": "Delta mode: status of every attention item of the previous guide; empty otherwise.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "status",
+          "note"
+        ],
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "unchanged",
+              "changed",
+              "resolved"
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
