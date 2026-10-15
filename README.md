@@ -43,7 +43,7 @@ lefthook install                              # once per clone
 | Git hooks (Lefthook) | pre-commit: Spotless, gitleaks, Conventional Commits; pre-push: fast verify |
 | CI | full verify (Error Prone/NullAway, ArchUnit, JaCoCo 80%, SpotBugs/FindSecBugs) on JDK 25, CodeQL, gitleaks, dependency review |
 | Code smells | PMD/CPD on every PR → informational code-scanning notes on the diff, never blocking ([`docs/code-smells.md`](docs/code-smells.md)) |
-| AI review (`/pr-review`) | checklist reviewer + several bug-hunting models (Claude, OpenCode) + specialist lanes switched on by the diff (database, API contract, module boundaries, weakened checks) → aggregator verifies findings against the code → inline PR comments; a separate agent writes the review guide for the human (`/review-guide`, also runs without the AI review) ([`scripts/review/`](scripts/review/), [checklist](docs/review-checklist.md), [attention heuristics](docs/review-attention.md)) |
+| AI review (`/pr-review`) | checklist reviewer + several bug-hunting models (Claude, OpenCode) + specialist lanes switched on by the diff (database, API contract, module boundaries, weakened checks) → aggregator verifies findings against the code → confirmed defects are fixed automatically, one commit each, and re-reviewed → inline PR comments; a separate agent writes the review guide for the human (`/review-guide`, also runs without the AI review) ([`scripts/review/`](scripts/review/), [checklist](docs/review-checklist.md), [attention heuristics](docs/review-attention.md)) |
 | Repository rules | PRs only, required checks, resolved conversations, linear history (rebase merge); [`.github/rulesets/`](.github/rulesets/) |
 | Decisions | [`docs/adr/`](docs/adr/) |
 
