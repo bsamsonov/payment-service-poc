@@ -37,6 +37,7 @@ TIMEOUT="${PR_REVIEW_TIMEOUT:-1200}"
 L1=() L2=() OFF=()
 while read -r id level enabled; do
   [[ "$level" == "?" ]] && { log "WARNING: unknown reviewer '$id' in .review/reviewers.local or --skip — ignored"; continue; }
+  [[ "$level" == L[123] ]] || continue  # not a reviewer (fixer)
   [[ "$enabled" == on ]] || { OFF+=("$id"); continue; }
   case "$level" in L1) L1+=("$id") ;; L2) L2+=("$id") ;; esac
 done < <(reviewer_config)
