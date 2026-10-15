@@ -78,11 +78,18 @@ jq -r --arg pr "$pr" --arg round "$round" '
   | .id as $id | [$pr, $round, $id, .raw_findings, ([$a.findings[] | select(.sources | index($id))] | length)] | @tsv
 ' "$agg" >"$round_dir/stats.tsv"
 
-jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$round_dir/quorum.json" '
+lanes='{"lanes": []}'  # rounds bundled before lanes existed
+[[ -f "$round_dir/lanes.json" ]] && lanes="$(cat "$round_dir/lanes.json")"
+jq -r --arg pr "$pr" --arg round "$round" --arg mode "$mode" --slurpfile q "$round_dir/quorum.json" \
+  --argjson l "$lanes" '
   def loc: "`\(.path):\(.line)`";
   "# /pr-review report — PR #\($pr), round \($round) (\($mode))\n",
   "Reviewers ok: \($q[0].ok | join(", ")); failed: \(if ($q[0].failed | length) == 0 then "none" else ($q[0].failed | join(", ")) end)" +
     (if $q[0].quorum then "" else " — **degraded run, quorum not met**" end) + "\n",
+  (if ($l.lanes | length) > 0
+   then "Specialist lanes: \([$l.lanes[] | "\(.id) (\(.reasons[0])\(if (.reasons | length) > 1 then ", …" else "" end))"] | join("; "))" +
+        (if ($q[0].lanes_missing // [] | length) > 0 then " — **not reviewed: \($q[0].lanes_missing | join(", "))**" else "" end) + "\n"
+   else "Specialist lanes: none switched on\n" end),
   "## Confirmed findings (\(.findings | length))\n",
   (.findings[] | "### \(.id) · \(.severity)\(if .rule != "" then " · " + .rule else "" end) — \(.title)\n" +
      "- location: \(loc)\(if .in_diff then "" else " (outside the diff)" end)\n- reported by: \(.sources | join(", "))\n\n\(.body)\n"),

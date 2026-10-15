@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 # Build a review bundle for a pull request:
 #   .review/<pr>/<round>/bundle/{manifest.md,diff.patch,files/,checklist.md,context.md,attention.md,product.md,
-#                                signals.md,spec/,previous-findings.md}
+#                                signals.md,spec/,previous-findings.md,lanes/,adr/}
+#   .review/<pr>/<round>/lanes.json — specialist lanes of the round (lanes.py)
 # Prints the round directory on stdout.
 #
 # Usage: scripts/review/bundle.sh <pr> [--delta]
 #   --delta  diff only against the head reviewed in the previous round; previous findings are included.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
-require gh git jq
+require gh git jq python3
 
 pr="${1:?usage: bundle.sh <pr> [--delta]}"
 [[ "$pr" =~ ^[0-9]+$ ]] || die "PR number expected, got: $pr"
@@ -115,9 +116,14 @@ fi
 
 jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \
   --arg head "$head_sha" --arg base "$base_sha" --arg from "$diff_from" --arg head_ref "$head_ref" \
+  --arg base_ref "$base_ref" --arg base_tip "$(git rev-parse "origin/$base_ref")" \
   --arg created "$(date -u +%FT%TZ)" \
-  '{pr:$pr, round:$round, mode:$mode, head_sha:$head, base_sha:$base, diff_from:$from, head_ref:$head_ref, created:$created}' \
+  '{pr:$pr, round:$round, mode:$mode, head_sha:$head, base_sha:$base, diff_from:$from, head_ref:$head_ref,
+    base_ref:$base_ref, base_tip:$base_tip, created:$created}' \
   >"$round_dir/meta.json"
+
+# Specialist lanes (L3): which ones this round needs, with their facts and checklists (PR_REVIEW_LANES overrides).
+python3 "$SCRIPTS_DIR/lanes.py" "$round_dir"
 
 {
   echo "# Review bundle — PR #$pr, round $round ($mode)"
@@ -142,6 +148,12 @@ jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \
   echo "- \`signals.md\` — facts computed from the whole PR diff: size by area, sensitive paths, markers"
   [[ -d "$bundle/spec" ]] && echo "- \`spec/\` — $(ls "$bundle/spec" | tr '\n' ' ')"
   [[ -f "$bundle/previous-findings.md" ]] && echo "- \`previous-findings.md\`"
+  if [[ "$(jq '.lanes | length' "$round_dir/lanes.json")" -gt 0 ]]; then
+    echo "- \`lanes/<lane>/\` — specialist lanes (L3) switched on by this diff, each with \`facts.md\` and \`checklist.md\`:"
+    jq -r '.lanes[] | "  - `\(.id)` — \(.reasons | join("; "))"' "$round_dir/lanes.json"
+    echo "- \`adr/\` — architecture decision records at the PR head"
+    [[ -f "$bundle/architecture.md" ]] && echo "- \`architecture.md\` — \`docs/architecture.md\` at the PR head"
+  fi
   echo
   echo "## PR description"
   echo
