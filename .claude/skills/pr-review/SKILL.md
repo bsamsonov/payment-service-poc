@@ -1,7 +1,7 @@
 ---
 name: pr-review
-description: Multi-model AI review of a pull request — checklist reviewer, several bug-hunting models, verified aggregation, inline PR comments, then the review guide for the human (/review-guide). Use when the user says "/pr-review <PR>", "review PR N", "run the AI review", "second review round", "re-review after fixes".
-argument-hint: "<pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish]"
+description: Multi-model AI review of a pull request — checklist reviewer, several bug-hunting models, specialist lanes (database, API contract, module boundaries, weakened checks) switched on by the diff, verified aggregation, inline PR comments, then the review guide for the human (/review-guide). Use when the user says "/pr-review <PR>", "review PR N", "run the AI review", "second review round", "re-review after fixes".
+argument-hint: "<pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish] [--lanes=<list> | --no-lanes]"
 ---
 
 # /pr-review
@@ -10,10 +10,21 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
 
 1. `bundle.sh` — `.review/<pr>/<round>/bundle/`: diff, full changed files, spec, `docs/review-checklist.md`,
    `docs/review-context.md` (from the PR head), `signals.md` (facts from the diff), `docs/review-attention.md` and
-   `docs/product.md` (from the PR head, else the base branch).
+   `docs/product.md` (from the PR head, else the base branch). `lanes.py` decides which specialist lanes the diff
+   of the round switches on (`lanes.json` with the reasons) and writes their facts without a model:
+   | Lane | Switched on by | Facts |
+   |---|---|---|
+   | `db` | `src/main/resources/db/**` | changed migrations, edits of migrations from the base branch, `squawk` |
+   | `api` | `api/**`, `adapter/in/web/**` | `oasdiff breaking` (docker), `redocly lint`, full contract at the head |
+   | `boundaries` | new package, `package-info.java`, new dependency between components, ports, events | components, new/removed dependencies, cross-module edges, cycles |
+   | `guards` | architecture rules, analyzer config, `pom.xml`, CI, hooks, `AGENTS.md`, review docs, suppressions | changed guard paths, suppressions and skips, removed rule lines, thresholds |
+   In `--delta` a lane runs only when the new commits touch it again. Lane checklists: `scripts/review/lanes/<lane>.md`.
 2. `run-reviewers.sh` — in parallel: L1 `review-checklist` (sonnet); L2 `review-bugs` (opus), OpenCode
-   `deepseek-v4-pro` and `glm-5.3` (on a bundle copy outside the repo), built-in `/code-review` (headless).
-   Quorum: L1 and at least one L2 reviewer must succeed, otherwise exit code 3.
+   `deepseek-v4-pro` and `glm-5.3` (on a bundle copy outside the repo), built-in `/code-review` (headless);
+   L3 `review-lane` (opus), one run per lane that is on. Lane findings are `drift` (breaks a recorded decision) or
+   `needs-decision` (a structural choice no document settles; the aggregator rejects it as a defect and the guide
+   turns it into an Architect's attention item).
+   Quorum: L1, at least one L2 reviewer and every lane that is on must succeed, otherwise exit code 3.
 3. `aggregate.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
    `report.md`, `stats.tsv`.
 4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
@@ -46,10 +57,13 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
 
 - Requires `gh` (authenticated), `claude`, `jq`; OpenCode reviewers need `opencode` with the `opencode-go` provider.
   A missing OpenCode only degrades L2, it does not stop the run.
-- Subset of reviewers: `PR_REVIEW_REVIEWERS="checklist bugs-opus"`; per-reviewer timeout: `PR_REVIEW_TIMEOUT`.
+- Subset of reviewers: `PR_REVIEW_REVIEWERS="checklist bugs-opus"` (lanes are `lane-<id>`); per-reviewer timeout:
+  `PR_REVIEW_TIMEOUT`. Lanes: `--lanes=db,api` forces a set, `--no-lanes` switches them off (both recorded in
+  `lanes.json`); `PR_REVIEW_LANE_TOOLS=0` skips squawk/oasdiff/redocly (offline). The tools need `npx` and network,
+  `oasdiff` needs docker; a tool that does not run is noted in `facts.md` and the lane still runs.
 - Everything in `.review/` is local and git-ignored. `stats.tsv` (reviewer, raw findings, confirmed) feeds the
   review statistics.
-- Cost: reviewers and the aggregator as before, plus one opus call for the guide (about $1–1.5 on a PR of PR #13's
+- Cost: reviewers and the aggregator as before, plus one opus call per lane that is on, plus one opus call for the guide (about $1–1.5 on a PR of PR #13's
   size).
 - Ratchet: when a confirmed finding could be caught by a tool, propose an automated check; otherwise propose a new
   `RC-NN` rule in `docs/review-checklist.md`. Feedback on the guide (useful, noise, missed) goes to "Lessons from past
