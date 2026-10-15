@@ -4,12 +4,18 @@
 #   logs/<reviewer>.*   — stderr, usage/cost metadata, exit status
 #
 # Usage: scripts/review/run-reviewers.sh <round-dir> [--allow-degraded]
-# Env:   PR_REVIEW_REVIEWERS  space-separated subset (default: all)
+# Reviewers, their levels and on/off: scripts/review/reviewers.conf, overridden by .review/reviewers.local.
+# Env:   PR_REVIEW_REVIEWERS  space-separated list to run exactly (default: every reviewer that is on — L1, L2 and
+#                             the lanes of lanes.json); results of the other reviewers of the round stay as they are
+#        PR_REVIEW_SKIP       comma- or space-separated reviewers switched off for this run
 #        PR_REVIEW_TIMEOUT    per-reviewer timeout, seconds (default: 1200)
 #        PR_REVIEW_CODE_REVIEW_MODEL  model for the built-in /code-review (default: opus)
 #
-# Quorum: L1 (checklist) must succeed and at least one L2 reviewer must succeed; otherwise exit 3
-# unless --allow-degraded (recorded in quorum.json).
+# Quorum: L1 (checklist) must succeed, at least one L2 reviewer must succeed and every L3 lane switched on for the
+# round (lanes.json, written by lanes.py) must succeed — counting only reviewers that are on (a level with every
+# reviewer off is not required, a lane that is off is not waited for); otherwise exit 3 unless --allow-degraded (recorded in
+# quorum.json). A lane is required because nothing else covers its area: a migration PR without the db lane is worse
+# than one bug-hunting model less.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude gh jq timeout
@@ -27,9 +33,24 @@ mode="$(jq -r .mode "$round_dir/meta.json")"
 
 OPENCODE="${OPENCODE:-$(command -v opencode || echo "$HOME/.opencode/bin/opencode")}"
 TIMEOUT="${PR_REVIEW_TIMEOUT:-1200}"
-L1=(checklist)
-L2=(bugs-opus deepseek glm code-review)
-read -ra REVIEWERS <<<"${PR_REVIEW_REVIEWERS:-${L1[*]} ${L2[*]}}"
+# Levels and on/off come from reviewers.conf (+ .review/reviewers.local, PR_REVIEW_SKIP); see lib.sh reviewer_config.
+L1=() L2=() OFF=()
+while read -r id level enabled; do
+  [[ "$level" == "?" ]] && { log "WARNING: unknown reviewer '$id' in .review/reviewers.local or --skip — ignored"; continue; }
+  [[ "$enabled" == on ]] || { OFF+=("$id"); continue; }
+  case "$level" in L1) L1+=("$id") ;; L2) L2+=("$id") ;; esac
+done < <(reviewer_config)
+is_off() { [[ " ${OFF[*]} " == *" $1 "* ]]; }
+# L3: one reviewer per specialist lane switched on by the diff of the round, unless the lane is off.
+LANES=() lanes_disabled=()
+if [[ -f "$round_dir/lanes.json" ]]; then
+  while read -r id; do
+    if is_off "$id"; then lanes_disabled+=("$id"); else LANES+=("$id"); fi
+  done < <(jq -r '.lanes[].id | "lane-" + .' "$round_dir/lanes.json")
+fi
+# PR_REVIEW_REVIEWERS (--only) runs exactly the listed reviewers, even ones that are off, and leaves the results
+# of the others in the round untouched; without it the round runs every reviewer that is on.
+read -ra REVIEWERS <<<"${PR_REVIEW_REVIEWERS:-${L1[*]} ${L2[*]} ${LANES[*]}}"
 
 # run_one is called in a conditional context where `set -e` is off, so every failure must be returned explicitly.
 
@@ -41,10 +62,11 @@ claude_result() {
 }
 
 # Headless Claude Code with a project subagent: no MCP servers, no skills, no hooks, no saved session.
+# Optional third argument: extra instructions appended to the prompt (the lane of an L3 reviewer).
 claude_agent() {
-  local agent="$1" id="$2"
+  local agent="$1" id="$2" extra="${3:-}"
   (cd "$REPO_ROOT" && timeout "$TIMEOUT" claude \
-    -p "Review the bundle in \`$bundle_rel/\` (start with \`$bundle_rel/manifest.md\`). PR #$pr." \
+    -p "Review the bundle in \`$bundle_rel/\` (start with \`$bundle_rel/manifest.md\`). PR #$pr.${extra:+ $extra}" \
     --agent "$agent" \
     --output-format json \
     --permission-mode dontAsk \
@@ -116,6 +138,16 @@ JSON
   return "$rc"
 }
 
+# L3 lane reviewer: the generic review-lane agent with the lane's checklist and facts from the bundle.
+claude_lane() {
+  local lane="$1" id="$2"
+  [[ -f "$bundle/lanes/$lane/checklist.md" && -f "$bundle/lanes/$lane/facts.md" ]] || {
+    echo "lane $lane is not prepared in $bundle_rel/lanes/ (run lanes.py, or set PR_REVIEW_LANES)" >"$round_dir/logs/$id.err"
+    return 1
+  }
+  claude_agent review-lane "$id" "Lane: \`$lane\`. Checklist: \`$bundle_rel/lanes/$lane/checklist.md\`; facts: \`$bundle_rel/lanes/$lane/facts.md\`."
+}
+
 # A report counts only if it has the structure its prompt requires; a truncated or chatty answer does not.
 report_complete() {
   local id="$1" f="$round_dir/raw/$1.md"
@@ -123,6 +155,7 @@ report_complete() {
   case "$id" in
     checklist)               grep -q '^# L1 checklist review' "$f" && grep -qE '^\| *RC-[0-9]+' "$f" ;;
     bugs-opus|deepseek|glm)  grep -q '^# L2 bug review' "$f" && grep -q '^## Findings' "$f" ;;
+    lane-*)                  grep -q "^# L3 ${id#lane-} review" "$f" && grep -q '^## Findings' "$f" ;;
     *)                       ;;  # /code-review has a free-form answer
   esac
 }
@@ -135,6 +168,7 @@ run_one() {
     code-review) claude_code_review "$id" ;;
     deepseek)    opencode_review deepseek-v4-pro "$id" ;;
     glm)         opencode_review glm-5.3 "$id" ;;
+    lane-*)      claude_lane "${id#lane-}" "$id" ;;
     *)           echo "unknown reviewer: $id" >"$round_dir/logs/$id.err"; return 1 ;;
   esac
 }
@@ -144,6 +178,16 @@ log "PR #$pr round $(basename "$round_dir"): running ${REVIEWERS[*]} (timeout ${
 for id in "${REVIEWERS[@]}"; do
   rm -f "$round_dir/raw/$id.md" "$round_dir/logs/$id".{json,err,status}
 done
+# Reviewers that are off are recorded as skipped, so that the report and the stats show who did not take part.
+if [[ -z "${PR_REVIEW_REVIEWERS:-}" ]]; then
+  for id in "${OFF[@]}"; do
+    [[ "$id" == lane-* && " ${lanes_disabled[*]} " != *" $id "* ]] && continue  # lane not switched on anyway
+    rm -f "$round_dir/raw/$id.md" "$round_dir/logs/$id".{json,err}
+    echo "skipped 0 disabled" >"$round_dir/logs/$id.status"
+    echo "skipped: switched off in reviewers.conf, .review/reviewers.local or --skip" >"$round_dir/logs/$id.err"
+  done
+  [[ ${#OFF[@]} -eq 0 ]] || log "switched off: ${OFF[*]}"
+fi
 
 declare -A pids=()
 for id in "${REVIEWERS[@]}"; do
@@ -168,36 +212,47 @@ done
 
 # Quorum over every reviewer of the round, so that re-running a subset keeps earlier successful results.
 # An `ok` status counts only while its report is still present and complete (it may have been removed since).
-ok=() failed=()
+ok=() failed=() skipped=() disabled=()
 for f in "$round_dir"/logs/*.status; do
   id="$(basename "$f" .status)"
+  [[ "$(cut -d' ' -f3 "$f")" == disabled ]] && disabled+=("$id")
   case "$(cut -d' ' -f1 "$f")" in
     ok)      if report_complete "$id"; then ok+=("$id")
              else log "  $id: status ok but raw/$id.md is missing or incomplete — counted as failed"; failed+=("$id"); fi ;;
-    skipped) ;;  # neither helps nor hurts the quorum
+    skipped) skipped+=("$id") ;;  # neither helps nor hurts the quorum
     *)       failed+=("$id") ;;
   esac
 done
 
+# A level is required only while some reviewer of it is on: switching off all of L2 is a deliberate choice.
 l1_ok=false l2_ok=0
 for id in "${ok[@]}"; do
   [[ " ${L1[*]} " == *" $id "* ]] && l1_ok=true
   [[ " ${L2[*]} " == *" $id "* ]] && l2_ok=$(( l2_ok + 1 ))
 done
+[[ ${#L1[@]} -eq 0 ]] && l1_ok=true
+[[ ${#L2[@]} -eq 0 ]] && l2_ok=1
+lanes_missing=()
+for id in "${LANES[@]}"; do
+  [[ " ${ok[*]} " == *" $id "* ]] || lanes_missing+=("$id")
+done
 quorum=true
-[[ "$l1_ok" == true && $l2_ok -ge 1 ]] || quorum=false
+[[ "$l1_ok" == true && $l2_ok -ge 1 && ${#lanes_missing[@]} -eq 0 ]] || quorum=false
 
 jq -n --argjson quorum "$quorum" --argjson degraded "$allow_degraded" --arg head "$head_sha" \
-  --arg ok "${ok[*]}" --arg failed "${failed[*]}" \
-  '{quorum:$quorum, allow_degraded:$degraded, head_sha:$head,
-    ok:($ok | split(" ") | map(select(. != ""))), failed:($failed | split(" ") | map(select(. != "")))}' \
+  --arg ok "${ok[*]}" --arg failed "${failed[*]}" --arg skipped "${skipped[*]}" --arg off "${disabled[*]}" \
+  --arg lanes "${LANES[*]}" --arg missing "${lanes_missing[*]}" --arg lanes_off "${lanes_disabled[*]}" \
+  'def words: split(" ") | map(select(. != ""));
+   {quorum:$quorum, allow_degraded:$degraded, head_sha:$head, ok:($ok | words), failed:($failed | words),
+    skipped:($skipped | words), disabled:($off | words),
+    lanes_required:($lanes | words), lanes_missing:($missing | words), lanes_disabled:($lanes_off | words)}' \
   >"$round_dir/quorum.json"
 
 if [[ "$quorum" == false ]]; then
   if [[ "$allow_degraded" == true ]]; then
-    log "quorum NOT met (L1 ok: $l1_ok, L2 ok: $l2_ok) — continuing because of --allow-degraded"
+    log "quorum NOT met (L1 ok: $l1_ok, L2 ok: $l2_ok, lanes missing: ${lanes_missing[*]:-none}) — continuing because of --allow-degraded"
   else
-    log "quorum NOT met (L1 ok: $l1_ok, L2 ok: $l2_ok). See $round_dir/logs/. Re-run with --allow-degraded to continue."
+    log "quorum NOT met (L1 ok: $l1_ok, L2 ok: $l2_ok, lanes missing: ${lanes_missing[*]:-none}). See $round_dir/logs/. Re-run with --allow-degraded to continue."
     exit 3
   fi
 fi

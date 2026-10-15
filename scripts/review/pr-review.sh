@@ -1,18 +1,26 @@
 #!/usr/bin/env bash
-# /pr-review pipeline: bundle → reviewers (parallel, quorum) → aggregation → review guide → publication.
+# /pr-review pipeline: bundle (+ specialist lanes) → reviewers (parallel, quorum) → aggregation → review guide →
+# publication.
 #
 # Usage: scripts/review/pr-review.sh <pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish]
+#                                         [--lanes=<lane,…> | --no-lanes] [--skip=<id,…>] [--only=<id,…>]
 #   --delta           review only the commits pushed since the previous round
 #   --allow-degraded  continue when the quorum is not met (recorded in the report)
 #   --no-guide        skip the review guide (guide.sh can be run later on the same round)
 #   --no-publish      stop before publication (report.md / guide.md stay local)
-# Env: PR_REVIEW_REVIEWERS, PR_REVIEW_TIMEOUT (see run-reviewers.sh)
+#   --lanes=db,api    run exactly these specialist lanes (L3) instead of the ones the diff switches on
+#   --no-lanes        run no specialist lanes
+#   --skip=glm,deepseek  switch these reviewers off for this run (recorded as skipped; see reviewers.conf)
+#   --only=checklist,bugs-opus  run just these reviewers (lanes as lane-<id>); others keep earlier results of the round
+# Reviewers on/off by default: scripts/review/reviewers.conf; personal override: .review/reviewers.local.
+# Env: PR_REVIEW_REVIEWERS, PR_REVIEW_SKIP, PR_REVIEW_TIMEOUT (see run-reviewers.sh), PR_REVIEW_LANES, PR_REVIEW_LANE_TOOLS
+#      (see lanes.py)
 #
 # Exit codes: 0 ok, 1 error, 3 quorum not met.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-pr="${1:?usage: pr-review.sh <pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish]}"
+pr="${1:?usage: pr-review.sh <pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish] [--lanes=<list> | --no-lanes] [--skip=<list>] [--only=<list>]}"
 shift
 delta=() degraded=() publish=true guide=true
 for arg in "$@"; do
@@ -21,6 +29,10 @@ for arg in "$@"; do
     --allow-degraded) degraded=(--allow-degraded) ;;
     --no-guide)       guide=false ;;
     --no-publish)     publish=false ;;
+    --lanes=*)        export PR_REVIEW_LANES="${arg#--lanes=}" ;;
+    --no-lanes)       export PR_REVIEW_LANES=none ;;
+    --skip=*)         export PR_REVIEW_SKIP="${arg#--skip=}" ;;
+    --only=*)         export PR_REVIEW_REVIEWERS="${arg#--only=}"; PR_REVIEW_REVIEWERS="${PR_REVIEW_REVIEWERS//,/ }" ;;
     *)                die "unknown option: $arg" ;;
   esac
 done
