@@ -62,6 +62,7 @@ inputs=()
 compgen -G "$round_dir/raw/*.md" >/dev/null \
   && inputs+=("- AI reviewer reports: $(cd "$round_dir/raw" && ls -1 *.md | sed "s|^|\`$round_rel/raw/|; s|$|\`|" | paste -sd' ' -)")
 [[ -f "$round_dir/aggregate.json" ]] && inputs+=("- verified findings and rejections: \`$round_rel/aggregate.json\`")
+[[ -f "$round_dir/fixes.json" ]] && inputs+=("- auto-fix of the findings (fix commits, findings left to the owner): \`$round_rel/fixes.json\`")
 [[ -f "$round_dir/previous-guide.json" ]] && inputs+=("- previous guide: \`$round_rel/previous-guide.json\`")
 (( ${#inputs[@]} )) || inputs+=("- no AI review results for this round")
 

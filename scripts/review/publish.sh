@@ -4,6 +4,8 @@
 #     the PR diff go into the review body;
 #   - one PR comment with guide.md (written by guide.sh), when the round has one.
 # Inline comments open review threads; the ruleset requires all threads to be resolved before merge.
+# After an auto-fix (fix.sh, fixes.json) every comment says whether the finding was fixed and in which commit; the
+# thread is still left open for the owner to check the fix and resolve it.
 #
 # Idempotent: each step is recorded in published.json right after it succeeds and is not repeated on a re-run
 # (e.g. after the guide comment failed); --force posts again.
@@ -56,18 +58,34 @@ if [[ "$guide_only" == false ]]; then
   ' "$round_dir/pr.patch" | sort -u >"$round_dir/commentable.tsv"
 
   payload="$round_dir/review-payload.json"
-  jq --rawfile ok "$round_dir/commentable.tsv" --arg sha "$head_sha" --arg round "$round" '
+  fixes='{}'
+  [[ -f "$round_dir/fixes.json" ]] && fixes="$(cat "$round_dir/fixes.json")"
+  jq --rawfile ok "$round_dir/commentable.tsv" --arg sha "$head_sha" --arg round "$round" --argjson fx "$fixes" '
     ($ok | split("\n") | map(select(. != "")) | map({key: ., value: true}) | from_entries) as $valid
+    | (($fx.items // []) | map({key: .id, value: .}) | from_entries) as $fixed
     | def head: "**[\(.id) · \(.severity)\(if .rule != "" then " · " + .rule else "" end)] \(.title)**";
-      def foot: "\n\n<sub>/pr-review round \($round) · reported by: \(.sources | join(", "))</sub>";
+      def fix: $fixed["R\($round)-\(.id)"] as $f
+        | if $f == null then ""
+          elif $f.status == "fixed" then
+            "\n\n**Auto-fixed in `\($f.sha[:7])`**\(if $fx.pushed then "" else " (not pushed: \($fx.push_error))" end)" +
+            " — \($f.reason). Please check the fix commit and resolve this thread."
+          elif $f.status == "owner" then "\n\n**Not auto-fixed — needs the owner:** \($f.reason)"
+          else "\n\n**Not auto-fixed:** \($f.reason)" end;
+      def foot: fix + "\n\n<sub>/pr-review round \($round) · reported by: \(.sources | join(", "))</sub>";
       [.findings[] | . + {commentable: ($valid["\(.path)\t\(.line)"] // false)}] as $all
     | {
         commit_id: $sha,
         event: "COMMENT",
         body: ("/pr-review round \($round): \($all | length) confirmed finding(s); see the review guide comment."
+               + (if $fx.status == "done" then
+                    "\n\nAuto-fix: \([$fx.items[] | select(.status == "fixed")] | length) fixed" +
+                    (if $fx.pushed then " and pushed (`\($fx.head_before[:7])..\($fx.head_after[:7])`)"
+                     else " — not pushed: \($fx.push_error)" end) +
+                    ", \([$fx.items[] | select(.status != "fixed")] | length) left to the owner."
+                  else "" end)
                + (if any($all[]; .commentable | not) then
                     "\n\nFindings outside the diff:\n" +
-                    ([$all[] | select(.commentable | not) | "- \(head) `\(.path):\(.line)`\n  \(.body)"] | join("\n"))
+                    ([$all[] | select(.commentable | not) | "- \(head) `\(.path):\(.line)`\n  \(.body)\(fix | gsub("\n\n"; "\n  "))"] | join("\n"))
                   else "" end)),
         comments: [$all[] | select(.commentable) | {path, line, side: "RIGHT", body: (head + "\n\n" + .body + foot)}]
       }

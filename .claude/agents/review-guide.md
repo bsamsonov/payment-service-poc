@@ -83,6 +83,10 @@ The user message gives the round directory and says which of the optional parts 
   - `aggregate.json` — `findings` (confirmed, already posted as PR comments: do not repeat them, refer by id when an
     item builds on one) and `rejected` with reasons. A reason like "speculative" or "design decision, not a defect"
     marks a candidate for you, not a closed question.
+  - `fixes.json` (when the round ran the auto-fix) — per finding `R<n>-F<k>`: `fixed` (commit `sha`, already
+    pushed to the PR), `not_fixed` or `owner` with the reason. A fix commit is new code the reviewers never saw: when
+    one changes behaviour beyond the finding (a new branch, a changed contract of a method, a new test fixture), put
+    it into "read line by line"; an `owner` reason is often a decision — consider it for `attention`.
 
 The repository is your working directory and is checked out at the PR head or close to it; `bundle/files/` is
 authoritative for changed files. Use Read, Grep and Glob on the rest of the code to see what the change correlates
