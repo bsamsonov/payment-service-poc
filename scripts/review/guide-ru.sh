@@ -56,6 +56,43 @@ file_at_head() {
       fi
       echo
     done
+
+  # Every file of this round's diff, for the "what the PR consists of" section. Line counts with and without
+  # whitespace changes show re-indented files; they need the commits, otherwise the patch is counted.
+  diff_from="$(jq -r .diff_from "$round_dir/meta.json")"
+  echo "## Changed files in this round (${diff_from:0:7}..${head_sha:0:7})"
+  echo
+  echo "| Status | Path | +/− | +/− ignoring whitespace | Link |"
+  echo "|---|---|---|---|---|"
+  if git -C "$REPO_ROOT" cat-file -e "$diff_from^{commit}" 2>/dev/null \
+     && git -C "$REPO_ROOT" cat-file -e "$head_sha^{commit}" 2>/dev/null; then
+    G=(git -C "$REPO_ROOT" diff --no-renames)
+    awk -F'\t' -v url="$repo_url" -v head="$head_sha" -v from="$diff_from" '
+      FILENAME == ARGV[1] { st[$2] = $1; order[++n] = $2; next }
+      FILENAME == ARGV[2] { all[$3] = "+" $1 "/−" $2; next }
+                          { ws[$3] = "+" $1 "/−" $2 }
+      END {
+        for (i = 1; i <= n; i++) {
+          p = order[i]; sha = (st[p] == "D") ? from : head
+          link = (url == "") ? "" : url "/blob/" sha "/" p
+          printf "| %s | `%s` | %s | %s | %s |\n", st[p], p, all[p], (p in ws) ? ws[p] : "+0/−0", link
+        }
+      }' <("${G[@]}" --name-status "$diff_from" "$head_sha") \
+         <("${G[@]}" --numstat "$diff_from" "$head_sha") \
+         <("${G[@]}" --numstat -w "$diff_from" "$head_sha")
+  else
+    awk -v url="$repo_url" -v head="$head_sha" '
+      function flush() { if (p != "") printf "| %s | `%s` | +%d/−%d | n/a | %s |\n", s, p, a, d, (url == "" || s == "D") ? "" : url "/blob/" head "/" p }
+      /^diff --git / { flush(); p = ""; s = "M"; a = 0; d = 0; hunk = 0; next }
+      /^new file mode/ && !hunk { s = "A"; next }
+      /^deleted file mode/ && !hunk { s = "D"; next }
+      /^--- / && !hunk { if ($0 != "--- /dev/null") p = substr($0, 7); next }
+      /^\+\+\+ / && !hunk { if ($0 != "+++ /dev/null") p = substr($0, 7); next }
+      /^@@ / { hunk = 1; next }
+      hunk && /^\+/ { a++; next }
+      hunk && /^-/ { d++; next }
+      END { flush() }' "$round_dir/bundle/diff.patch"
+  fi
 } >"$round_dir/guide-context.md"
 log "code excerpts: $round_rel/guide-context.md"
 [[ "$context_only" == true ]] && exit 0
