@@ -28,7 +28,6 @@
       "Read(./.env)",
       "Read(./.env.*)",
       "Edit(./.idea/**)",
-      "Write(./.idea/**)",
       "Bash(git push --force:*)",
       "Bash(git push -f:*)",
       "Bash(git commit --no-verify:*)",
