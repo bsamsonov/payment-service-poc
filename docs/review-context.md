@@ -37,8 +37,13 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 - **Payment status**: `PENDING → PROCESSING → SUCCEEDED | FAILED`; refunds move `SUCCEEDED → PARTIALLY_REFUNDED |
   REFUNDED` and `PARTIALLY_REFUNDED → REFUNDED`. Transitions only forward; the exact table is defined by spec 001. Four sources change status — synchronous provider response, webhook, reconciler,
   refunds — and all of them go through one status-applying component.
-- **Audit**: every transition is appended to `payment_events` in the same transaction as the state change;
-  the table is append-only (`UPDATE`/`DELETE` denied to the application DB role).
+- **Audit**: every transition is appended to `payment_events` in the same transaction as the state change, and every
+  provider call to `provider_attempts`; both are append-only (trigger now; `UPDATE`/`DELETE` denied to the application
+  DB role in production). An event records the change only, not a snapshot of the payment. Requests rejected before a
+  payment exists go to the `AUDIT` log, not to a table.
+- **Schema conventions** (spec 001, Data changes): coded values are domains over `text` with a named `CHECK` (entity
+  fields declare `columnDefinition` = the domain), not reference tables or PG `ENUM`; `text` with a length `CHECK` only
+  where the length is a rule; every constraint is named; no columns for future specs.
 - **Refunds**: full or partial; the total refunded never exceeds the payment amount.
 - **Identifiers**: payment `id` is UUIDv7. The Stripe PaymentIntent id is never exposed in the API.
 
@@ -80,6 +85,9 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 ## Testing conventions
 - Unit tests `*Test` (no Spring context where possible); integration tests `*IT` with real PostgreSQL
   (Testcontainers, no H2) and WireMock for HTTP (HTTP clients are not mocked).
+- The PostgreSQL container is shared by all tests of a cached Spring context and journal tables (`payment_events`,
+  `provider_attempts`) cannot be cleaned (append-only triggers). Tests use unique data (random ids and external
+  references) and assert only on their own rows, never on table-wide counts.
 - Acceptance tests carry the spec-qualified AC id: `@DisplayName("001/AC-2: …")`. Test names state behavior.
   CI (`scripts/spec/check-ac-trace.sh`) already checks that ids exist and that every AC of an `Implemented` spec has a
   test; review whether the test asserts what the AC says.

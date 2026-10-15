@@ -1,0 +1,268 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  version: 0.1.0
+  description: |
+    Internal API for charging a customer's payment method (PoC). Spec: `specs/001-payment-core/spec.md`.
+
+    - Amounts are integers in minor units of the currency (cents for USD).
+    - Timestamps are ISO-8601 in UTC (`Z`). Absent optional fields are omitted.
+    - Errors are RFC 9457 Problem Details (`application/problem+json`).
+    - Every response carries a W3C `traceparent` header: the caller's trace is continued when a valid
+      `traceparent` is sent, otherwise a new trace is started.
+# The /api/v1 prefix is part of each path (not `servers`): the generated interface then maps the full path.
+servers:
+  - url: /
+tags:
+  - name: Payments
+paths:
+  /api/v1/payments:
+    post:
+      tags: [Payments]
+      operationId: createPayment
+      summary: Create a payment and charge the payment method
+      description: |
+        A repeated request creates a new payment (idempotency keys arrive in spec 002).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePaymentRequest'
+      responses:
+        '201':
+          description: Charged.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '202':
+          description: Outcome unknown (provider timeout or connection loss); the payment stays `PROCESSING`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '402':
+          description: Declined by the provider; the payment is `FAILED`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Business rule violated (amount bounds, currency not allowed); no payment is created.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '502':
+          description: The provider rejected the request without executing it; the payment is `FAILED`.
+          headers:
+            Location:
+              $ref: '#/components/headers/Location'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    get:
+      tags: [Payments]
+      operationId: findPayments
+      summary: Find payments by external reference
+      description: At most 20 payments, newest first. No match returns an empty array.
+      parameters:
+        - name: externalReference
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/ExternalReference'
+      responses:
+        '200':
+          description: Matching payments.
+          content:
+            application/json:
+              schema:
+                type: array
+                maxItems: 20
+                items:
+                  $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/payments/{id}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Get a payment by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Payment id (UUIDv7). A malformed id returns `404`.
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: The payment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        '404':
+          description: Unknown or malformed id.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+components:
+  headers:
+    Location:
+      description: URL of the payment, `/api/v1/payments/{id}`.
+      schema:
+        type: string
+  responses:
+    ValidationError:
+      description: Malformed request (syntax, missing or unknown field, type, length, pattern); lists all field errors.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    ExternalReference:
+      type: string
+      minLength: 1
+      maxLength: 100
+      pattern: '^[A-Za-z0-9._:-]+$'
+      description: The caller's reference (e.g. an order id); not unique.
+    CreatePaymentRequest:
+      type: object
+      additionalProperties: false
+      description: Unknown fields are rejected with `400`.
+      required: [amount, currency, paymentMethodId, externalReference]
+      properties:
+        amount:
+          type: integer
+          format: int64
+          description: |
+            Amount in minor units. Business limits (`422`, not `400`): at least the currency minimum
+            (USD: 50) and at most 8 digits.
+          example: 1999
+        currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: 'ISO 4217 code, uppercase. Must be in the allow-list (v1: `USD`), otherwise `422`.'
+          example: USD
+        paymentMethodId:
+          type: string
+          maxLength: 255
+          pattern: '^pm_[A-Za-z0-9_]+$'
+          example: pm_card_visa
+        externalReference:
+          $ref: '#/components/schemas/ExternalReference'
+        description:
+          type: string
+          maxLength: 500
+        metadata:
+          $ref: '#/components/schemas/Metadata'
+    Metadata:
+      type: object
+      maxProperties: 10
+      description: 'Up to 10 string pairs; key at most 40 characters, value at most 500.'
+      additionalProperties:
+        type: string
+        maxLength: 500
+    PaymentStatus:
+      type: string
+      enum: [PENDING, PROCESSING, SUCCEEDED, FAILED, PARTIALLY_REFUNDED, REFUNDED]
+    FailureCode:
+      type: string
+      enum: [card_declined, insufficient_funds, authentication_required, invalid_payment_method, provider_error]
+    Failure:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          $ref: '#/components/schemas/FailureCode'
+        message:
+          type: string
+          description: Safe message from the service's fixed dictionary; provider texts are never returned.
+    Payment:
+      type: object
+      required: [id, amount, currency, externalReference, status, refundedAmount, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        externalReference:
+          type: string
+        description:
+          type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        refundedAmount:
+          type: integer
+          format: int64
+        failure:
+          $ref: '#/components/schemas/Failure'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    FieldError:
+      type: object
+      required: [field, message]
+      properties:
+        field:
+          type: string
+          description: JSON path of the field, e.g. `metadata.key`; `$` for the whole body.
+        message:
+          type: string
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details with extension members.
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          description: |
+            `/problems/validation-error`, `/problems/business-rule-violation`, `/problems/payment-declined`,
+            `/problems/provider-error`, `/problems/payment-not-found`.
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+        paymentId:
+          type: string
+          format: uuid
+          description: Present on `402` and `502`.
+        failure:
+          $ref: '#/components/schemas/Failure'
+        errors:
+          type: array
+          description: Present on `400` and `422`.
+          items:
+            $ref: '#/components/schemas/FieldError'
