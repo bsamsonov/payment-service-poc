@@ -17,13 +17,13 @@ Output in the round directory: `guide.json` and `guide.md` (What changed, Archit
 Outside the declared scope, Findings if there was an AI review, Can be skimmed, sensitive paths checked), posted to
 the PR in English. Then `guide-ru.sh` writes `guide.ru.md` for the owner, not posted: a short Russian reading version
 in which every decision is explained in plain words with the relevant code lines and a GitHub link, so that it can be
-decided without opening the code (`review-guide-ru`, sonnet, about $0.15; `guide-context.md` holds the excerpts).
+decided without opening the code (`review-guide-ru`, opus, about $0.4; `guide-context.md` holds the excerpts).
 
 ## Steps
 
 1. Parse arguments: PR number (if missing: `gh pr view --json number -q .number`), `--no-publish`, `--reuse`
    (re-render from the saved agent output without a new model call), `--no-ru` (skip the Russian version). Tell the
-   user that one run costs about $1–1.5 (one opus call) plus about $0.15 for the Russian version, unless `--reuse`.
+   user that one run costs about $1–1.5 (one opus call) plus about $0.4 for the Russian version, unless `--reuse`.
 2. Run in the background (3–6 minutes) and wait for the notification:
    `scripts/review/guide.sh <pr> [--reuse] [--no-ru]` with `run_in_background: true`. The last line of stdout is the round
    directory.

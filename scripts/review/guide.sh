@@ -2,7 +2,7 @@
 # Write the guide for the human reviewer with the review-guide subagent:
 #   guide.json — structured result (schema: guide.schema.json)
 #   guide.md   — rendered guide (render-guide.jq), posted as a PR comment by publish.sh
-#   guide.ru.md — Russian reading version for the owner, not posted (guide-ru.sh, sonnet)
+#   guide.ru.md — Russian reading version for the owner, not posted (guide-ru.sh, opus)
 #
 # Works with or without an AI review round. Uses raw/*.md and aggregate.json of the round when they exist.
 #
