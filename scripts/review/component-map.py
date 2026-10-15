@@ -227,6 +227,7 @@ class Diagram:
         "changed": "fill:#fff3cd,stroke:#d39e00,color:#000",
         "removed": "fill:#f8d7da,stroke:#d73a49,color:#000,stroke-dasharray:4",
         "planned": "fill:none,stroke:#6c757d,stroke-dasharray:5",
+        "ghost": "fill:none,stroke:none",
     }
     ARROWS = {
         "kept": ("-->", ""),
@@ -248,9 +249,14 @@ class Diagram:
         if kind in self.STYLES:
             self.kinds[kind].append(ident)
 
-    def edge(self, source: str, target: str, kind: str = "kept") -> None:
+    def invisible(self, source: str, target: str) -> None:
+        """Keeps nodes in one row; an invisible link still takes a linkStyle index."""
+        self.lines.append(f"  {source} ~~~ {target}")
+        self.edges += 1
+
+    def edge(self, source: str, target: str, kind: str = "kept", label: str = "") -> None:
         arrow, style = self.ARROWS[kind]
-        self.lines.append(f"  {source} {arrow} {target}")
+        self.lines.append(f"  {source} {arrow}{f'|{label}|' if label else ''} {target}")
         if style:
             self.link_styles.append(f"  linkStyle {self.edges} {style}")
         self.edges += 1
@@ -261,6 +267,39 @@ class Diagram:
             out.append(f"  classDef {kind} {self.STYLES[kind]}")
             out.append(f"  class {','.join(members)} {kind}")
         return out + ["```", ""]
+
+
+def legend(state_only: bool) -> list[str]:
+    """The legend as a small diagram with the same styles, so it shows exactly what the map uses."""
+    key = Diagram()
+    nodes = [("l_kept", "untouched", "")]
+    if not state_only:
+        nodes = [("l_added", "new", "added"), ("l_changed", "changed", "changed"),
+                 ("l_removed", "removed", "removed")] + nodes
+    nodes += [("l_planned", "planned in plan.md", "planned")]
+    for ident, label, kind in nodes:
+        key.node("  ", ident, label, kind)
+    key.node("  ", "l_table", "database table", "", '[("{}")]')
+    row = [ident for ident, _, _ in nodes] + ["l_table"]
+    for left, right in zip(row, row[1:]):
+        key.invisible(left, right)
+    arrows = [("kept", "dependency")]
+    if not state_only:
+        arrows += [("added", "new dependency"), ("removed", "removed dependency")]
+    previous = None
+    for i, (kind, label) in enumerate(arrows):
+        source, target = f"l_from{i}", f"l_to{i}"
+        key.node("  ", source, " ", "ghost")
+        key.node("  ", target, " ", "ghost")
+        if previous:
+            key.invisible(previous, source)
+        key.edge(source, target, kind, label)
+        previous = target
+    out = ["**Legend**", ""] + key.render()
+    if not state_only:
+        out.append("<sub>Node labels: `+N` classes added, `~N` modified, `−N` deleted, `tests N` test files "
+                   "touched. Arrows are dependencies found in the code (imports and same-package names).</sub>")
+    return out
 
 
 def render(from_ref: str, head_ref: str, expand_all: bool) -> str:
@@ -342,15 +381,8 @@ def render(from_ref: str, head_ref: str, expand_all: bool) -> str:
         one.edge(node_id(component), "database")
     out = one.render()
 
-    legend = (
-        "arrows: dependencies found in the code · dashed: planned in `specs/*/plan.md`, not in the code yet"
-        if state_only
-        else "green: new, yellow: changed, red: removed, dashed: planned in `specs/*/plan.md`, plain: untouched · "
-        "`+` added, `~` modified, `−` deleted classes, `tests` test files touched · arrows: dependencies found in "
-        "the code (thick green: new, dashed red: removed)"
-    )
     revisions = f"`{head_ref[:7]}`" if state_only else f"`{from_ref[:7]}..{head_ref[:7]}`"
-    out.append(f"<sub>{revisions} · {legend}</sub>")
+    out.append(f"<sub>{'State at' if state_only else 'Range'} {revisions}</sub>")
     for title, edges in (("New dependencies", added_edges), ("Removed dependencies", removed_edges)):
         if edges and not state_only:
             out += ["", f"**{title}:** " + ", ".join(f"`{s}` → `{t}`" for s, t in edges)]
@@ -392,6 +424,8 @@ def render(from_ref: str, head_ref: str, expand_all: bool) -> str:
             two.edge(node_id(head.tables[table], "k_"), node_id(table, "t_"))
         scope = "all components" if state_only or expand_all else "touched components opened, the others collapsed"
         out += ["", f"**Classes** ({scope})", ""] + two.render()
+
+    out += ([""] if out[-1] else []) + legend(state_only) + [""]
 
     if state_only:
         return "\n".join(out).rstrip("\n") + "\n"
