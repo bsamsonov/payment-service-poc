@@ -18,8 +18,8 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    `report.md`, `stats.tsv`.
 4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
    `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, then
-   places to read line by line, out-of-scope changes, findings, what to skim), plus `guide.ru.md`, a Russian reading
-   version for the owner that is not posted. Same as `/review-guide`; skipped with `--no-guide`; a failure here does
+   places to read line by line, out-of-scope changes, findings, what to skim), plus two Russian documents for the
+   owner that are not posted: `guide.ru.md` (reading version) and `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
    not stop publication of the findings.
 5. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide.
 
@@ -36,7 +36,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    whether to fix the cause or re-run with `--allow-degraded`. Do not continue on your own.
 4. On success: read only `guide.md` and the last block of the script output. Report to the user in at most
    10 lines: number of findings by severity, the top three Architect's attention items, the top places to read,
-   links to the posted review and guide, the full path of `guide.ru.md`, failed reviewers if any. If the guide failed, say so and offer
+   links to the posted review and guide, the full paths of `guide.ru.md` and `walkthrough.ru.md`, failed reviewers if any. If the guide failed, say so and offer
    `/review-guide <pr>`.
 5. Closing findings is the user's decision. When asked to fix a finding: fix it in a separate commit
    (`fix(<scope>): …`) and reply in the thread. When the user decides it is not a bug: reply with the reason.

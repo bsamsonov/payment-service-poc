@@ -17,13 +17,16 @@ Output in the round directory: `guide.json` and `guide.md` (What changed, Archit
 Outside the declared scope, Findings if there was an AI review, Can be skimmed, sensitive paths checked), posted to
 the PR in English. Then `guide-ru.sh` writes `guide.ru.md` for the owner, not posted: a short Russian reading version
 in which every decision is explained in plain words with the relevant code lines and a GitHub link, so that it can be
-decided without opening the code (`review-guide-ru`, opus, about $0.4; `guide-context.md` holds the excerpts).
+decided without opening the code, plus a section that groups the changed files by purpose (`review-guide-ru`, opus,
+about $0.3–0.5). In parallel `walkthrough.ru.md`: a code walkthrough of the 5–8 most significant or unexpected places,
+each with a snippet, a GitHub link and a plain explanation, as a developer would show the change to an architect
+(`review-walkthrough-ru`, opus, about $0.6). `guide-context.md` holds the excerpts and the file table.
 
 ## Steps
 
 1. Parse arguments: PR number (if missing: `gh pr view --json number -q .number`), `--no-publish`, `--reuse`
    (re-render from the saved agent output without a new model call), `--no-ru` (skip the Russian version). Tell the
-   user that one run costs about $1–1.5 (one opus call) plus about $0.4 for the Russian version, unless `--reuse`.
+   user that one run costs about $1–1.5 (one opus call) plus about $1 for the two Russian documents, unless `--reuse`.
 2. Run in the background (3–6 minutes) and wait for the notification:
    `scripts/review/guide.sh <pr> [--reuse] [--no-ru]` with `run_in_background: true`. The last line of stdout is the round
    directory.
@@ -31,7 +34,7 @@ decided without opening the code (`review-guide-ru`, opus, about $0.4; `guide-co
    (idempotent: not posted twice for the same round).
 4. Read only `guide.md`. Report to the user in their language, in at most 10 lines: the top three attention items
    (title, question, `decide_by`), the places to read line by line, out-of-scope changes, the link to the comment,
-   and the full path of `guide.ru.md` if it was written.
+   and the full paths of `guide.ru.md` and `walkthrough.ru.md` if they were written.
 5. After the user has done the review, ask one question: which items were useful, which were noise, what did the
    guide miss. Propose one line per answer for "Lessons from past PRs" in `docs/review-attention.md`, in the format
    given there. Commit it only when the user agrees, on the branch the user names (usually a separate docs PR).
