@@ -66,11 +66,16 @@ for pair in "docs/review-checklist.md:checklist.md" "docs/review-context.md:cont
 done
 # Optional inputs of the review guide: heuristics and the product roadmap. A branch cut before they were added falls
 # back to the base branch.
+declare -A origin_of=()
 for pair in "docs/review-attention.md:attention.md" "docs/product.md:product.md"; do
   src="${pair%%:*}" dst="${pair##*:}"
-  git show "$head_sha:$src" >"$bundle/$dst" 2>/dev/null \
-    || git show "origin/$base_ref:$src" >"$bundle/$dst" 2>/dev/null \
-    || rm -f "$bundle/$dst"
+  if git show "$head_sha:$src" >"$bundle/$dst" 2>/dev/null; then
+    origin_of[$dst]="\`$src\` at the PR head"
+  elif git show "origin/$base_ref:$src" >"$bundle/$dst" 2>/dev/null; then
+    origin_of[$dst]="\`$src\` from \`$base_ref\`; the PR head does not have it yet"
+  else
+    rm -f "$bundle/$dst"
+  fi
 done
 # Facts about the whole PR diff (not the delta): size by area, sensitive paths, markers.
 "$SCRIPTS_DIR/signals.sh" "$round_dir/pr.patch" >"$bundle/signals.md"
@@ -132,8 +137,8 @@ jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \
     for path in "${deleted[@]}"; do echo "  - \`$path\`"; done
   fi
   echo "- \`checklist.md\`, \`context.md\`"
-  [[ -f "$bundle/attention.md" ]] && echo "- \`attention.md\` — heuristics for the Architect's attention section"
-  [[ -f "$bundle/product.md" ]] && echo "- \`product.md\` — product scope and the roadmap of later specs"
+  [[ -f "$bundle/attention.md" ]] && echo "- \`attention.md\` — heuristics for the Architect's attention section (${origin_of[attention.md]})"
+  [[ -f "$bundle/product.md" ]] && echo "- \`product.md\` — product scope and the roadmap of later specs (${origin_of[product.md]})"
   echo "- \`signals.md\` — facts computed from the whole PR diff: size by area, sensitive paths, markers"
   [[ -d "$bundle/spec" ]] && echo "- \`spec/\` — $(ls "$bundle/spec" | tr '\n' ' ')"
   [[ -f "$bundle/previous-findings.md" ]] && echo "- \`previous-findings.md\`"
