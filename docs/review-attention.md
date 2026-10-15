@@ -1,10 +1,21 @@
 # Review attention checklist
 
-Heuristics for the **Architect's attention** section of the `/pr-review` guide. The aggregator reads this file from
-the PR head and uses it to pick at most 7 decisions in the PR that deserve the human reviewer's own judgement —
-not bugs (those are findings), but choices that are hard to reverse, shape later specs or set a precedent.
+Heuristics for the **Architect's attention** section of the review guide (`/review-guide`, also run by `/pr-review`).
+The `review-guide` agent reads this file from the PR head (from the base branch when the head does not have it) and
+uses it to pick at most 7 decisions in the PR that deserve the human reviewer's own judgement — not bugs (those are
+findings), but choices that are hard to reverse, shape later specs or set a precedent.
 
 Large PRs scatter attention; this section answers one question: *if I can look at only three things, which ones?*
+
+## Owner's priorities
+
+When two decisions cost about the same to reverse, the one higher in this list goes first.
+
+1. **The API contract**: anything a client can observe and start relying on.
+2. **Isolation of layers and subdomains**: what `domain` and `application` know about the outside, what leaks through
+   a port or a DTO.
+3. **Changes stay in the declared scope**: a PR touches what its tasks name. Unrelated changes are reported even
+   when they are harmless.
 
 ## Categories
 
@@ -19,12 +30,16 @@ Ordered by cost of changing the decision later.
 
 ## What to look for
 
+These are examples collected from past PRs, grouped by category. They are not a complete list: a new kind of code
+brings new kinds of decisions.
+
 ### Irreversible
 - **Migrations**: constraints (`CHECK`, `UNIQUE`, `NOT NULL`, FKs) and triggers that forbid states a later spec may
   need (retries, reconciliation, refunds, webhooks); column types and sizes; data that can never be deleted
   (append-only tables) vs. personal data and retention.
 - **Public contract**: paths and versioning, status codes and the `400`/`422` boundary, field types and units
-  (amounts in minor units), strict vs. lenient parsing, error format. Anything a client may start relying on.
+  (amounts in minor units), strict vs. lenient parsing, error format and error codes, what is `required`, enum
+  values a client may switch on. Anything a client may start relying on.
 - **Stored formats**: identifiers (UUIDv7), hashes and their canonicalization (`request_hash`), enum values persisted
   as strings, JSON stored in `jsonb`.
 - **Uniqueness and identity**: which keys are unique and how they relate to idempotency (spec 002) and ownership
@@ -37,18 +52,26 @@ Ordered by cost of changing the decision later.
   `save()` of an existing row and under concurrent updates.
 - **Reliance on library defaults** (Hibernate, Jackson, Spring Boot) that an upgrade may change; is there a test
   that pins the behaviour?
-- **Boundaries**: what the domain depends on, what goes into the contract vs. code validation, which module owns a
-  rule.
+- **Domain model**: which type owns a rule (the aggregate, a policy, the use case), what the result types of a
+  domain operation are and whether later status sources (webhook, reconciler, refunds) fit them without change.
+- **Ports**: a new or changed port — one port per need, shaped by what the core asks for and not by the technology
+  behind it; would its signature survive the real provider (spec 003) replacing the fake one?
+- **Transaction boundaries**: where a transaction starts and ends, what is inside it, how a retry or a concurrent
+  request sees the intermediate state.
+- **Boundaries**: what the domain depends on, what goes into the contract vs. code validation, which layer maps
+  errors, a read path that bypasses the aggregate, any change to the ArchUnit rules or their allow-lists.
 - **Dependencies** that pull in more than needed (exporters, auto-configurations) or lock a version.
 
 ### Precedent
 - Spec status vs. the change (does a data-model change keep the spec `Approved`?).
 - Work deferred to a later PR or spec — is it recorded where it will be picked up?
 - Test conventions (shared database, never-cleaned tables, unique fixtures) that later tests will copy.
-- New exceptions to rules (suppressed checks, excluded files).
+- New exceptions to rules (suppressed checks, excluded files, `allowEmptyShould`).
 - Any change to architecture rules: `ModuleRules`, `HexagonRules`, `ArchitectureTest`, `TestConventionsTest`,
   `archfixture/` — a widened allow-list, a removed or weakened rule, a new `allowEmptyShould`, a class made `public`
   to satisfy H-06. Always show it: the coding agent is told to move code, never to change a rule.
+- The first class of a kind (first use case, first controller, first adapter, first mapper): later ones will be
+  written by copying it.
 
 ### Minor
 - Health checks, logging, small coverage gaps that are cheap to close now.
@@ -56,8 +79,13 @@ Ordered by cost of changing the decision later.
 ## Lessons from past PRs
 
 Ratchet: after each PR, add what the human reviewer found important but the guide missed, or what turned out to be
-noise. Keep entries short and concrete.
+noise. Keep entries short and concrete, one line each:
 
-- PR #13 (001, setup/contract/schema): the decisions worth time were the `CHECK` constraints on `payments` and
-  `payment_events`, the append-only trigger vs. personal data in `metadata`, the global strict Jackson settings, and
-  the `isNew()`/`@Version` persistence model — none of them was a bug finding.
+`PR #N (spec, scope) — missed | noise | useful: <what>; <why it mattered or did not>`
+
+- PR #13 (001, setup/contract/schema) — useful: the decisions worth time were the `CHECK` constraints on `payments`
+  and `payment_events`, the append-only trigger vs. personal data in `metadata`, the global strict Jackson settings,
+  and the `isNew()`/`@Version` persistence model; none of them was a bug finding.
+- PR #13 — missed: a reviewer raised the strict global `ObjectMapper` vs. future Stripe/webhook parsing and
+  `failure_code` not tied to `status`; both were rejected as speculative, and both turned out to be decisions the
+  owner wanted to make.
