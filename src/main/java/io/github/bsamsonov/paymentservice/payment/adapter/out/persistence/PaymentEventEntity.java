@@ -52,7 +52,8 @@ class PaymentEventEntity implements Persistable<UUID> {
     @SuppressWarnings("NullAway.Init")
     protected PaymentEventEntity() {}
 
-    @SuppressWarnings("TooManyParameters") // one parameter per journal column; built only by the journal mapper
+    // One parameter per journal column; built only by the journal mapper
+    @SuppressWarnings({"TooManyParameters", "PMD.ExcessiveParameterList"})
     PaymentEventEntity(
             UUID id,
             UUID paymentId,
