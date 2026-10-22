@@ -119,7 +119,7 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
   transaction as the resulting status change.
 - **AC-16** Given a request with a valid `traceparent`, then the journal rows carry its trace id and the response
   `traceparent` continues that trace; given none (or an invalid one), a new trace is started and returned.
-- **AC-17** Given a created payment, then the payment and its `PAYMENT_CREATED` event carry `request_hash`: SHA-256 of
+- **AC-17** Given a created payment, then the payment carries `request_hash` (the event does not repeat it): SHA-256 of
   the canonical request (all request fields, keys sorted, no insignificant whitespace). Requests differing only in key
   order or whitespace have the same hash; a different value in any field gives a different hash. (Used by 002 to
   detect "same `Idempotency-Key`, different request" → `422`.)
