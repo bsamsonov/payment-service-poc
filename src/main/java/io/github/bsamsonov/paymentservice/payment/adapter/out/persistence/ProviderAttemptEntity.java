@@ -45,7 +45,8 @@ class ProviderAttemptEntity implements Persistable<UUID> {
     @SuppressWarnings("NullAway.Init")
     protected ProviderAttemptEntity() {}
 
-    @SuppressWarnings("TooManyParameters") // one parameter per log column; built only by the journal mapper
+    // One parameter per log column; built only by the journal mapper
+    @SuppressWarnings({"TooManyParameters", "PMD.ExcessiveParameterList"})
     ProviderAttemptEntity(
             UUID id,
             UUID paymentId,
