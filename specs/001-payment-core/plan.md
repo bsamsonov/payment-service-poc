@@ -24,11 +24,13 @@ Module `io.github.bsamsonov.paymentservice.payment`; package names below are rel
 | `adapter.out.tracing` | `MicrometerTraceContext` | current trace id from Micrometer `Tracer` |
 | `config` | `PaymentsProperties` (`@ConfigurationProperties`: provider, currency allow-list, min/max), `ClockConfig`, `TransactionConfig` | |
 
-Status applier algorithm (AC-10, AC-11, AC-14): load payment → `payment.apply(target, data)` returns
-`Applied | NoOp | Rejected` → for `Applied`/`Rejected` append event with `sequence_no = max(sequence_no) + 1` → save
-(only `Applied` changes `payments`) → commit. On `ObjectOptimisticLockingFailureException` or a violation of
-`payment_events_sequence_unique`: re-read and re-apply, at most 3 attempts, then fail loudly (ERROR log; the payment
-stays in its last committed state).
+Status applier algorithm (AC-10, AC-11, AC-14): load the payment and `max(sequence_no)` of its events in one query
+(one snapshot, before the decision) → `payment.apply(target, data)` returns `Applied | NoOp | Rejected` → for
+`Applied`/`Rejected` append event with `sequence_no = max + 1` → save (only `Applied` changes `payments`) → commit.
+`max` read after the decision could already include a concurrent transition, so a `Rejected` event computed from a
+stale status would get the next free number and no conflict; read with the payment, it collides with that transition.
+On `ObjectOptimisticLockingFailureException` or a violation of `payment_events_sequence_unique`: re-read and
+re-apply, at most 3 attempts, then fail loudly (ERROR log; the payment stays in its last committed state).
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:
@@ -123,7 +125,7 @@ Generated sources are excluded from Spotless, Error Prone/NullAway, SpotBugs and
 | AC-11 | IT: sequence, statuses and failure code; rollback when the event insert fails (`@MockitoSpyBean` on the journal) | `PaymentStatusApplierIT` |
 | AC-12 | IT via `JdbcTemplate` on both logs | `AppendOnlyJournalIT` |
 | AC-13 | IT with a recording provider (`isActualTransactionActive()==false`, payment visible via a separate connection) | `ProviderCallTransactionIT` |
-| AC-14 | IT: two threads + `CountDownLatch` on one `PROCESSING` payment → one applied, one rejected, no exception; same for two rejected transitions (sequence collision) | `PaymentStatusApplierIT` |
+| AC-14 | IT: two threads + `CountDownLatch` on one `PROCESSING` payment → one applied, one rejected, no exception; same for two rejected transitions (sequence collision); a rejection decided on a stale status while another thread commits a transition collides and is re-applied on the new status | `PaymentStatusApplierIT` |
 | AC-15 | IT | `CreatePaymentIT` |
 | AC-16 | IT with and without `traceparent` | `TracingIT` |
 | AC-17 | unit (canonicalization cases) + IT (`payments` column) | `RequestHasherTest`, `CreatePaymentIT` |

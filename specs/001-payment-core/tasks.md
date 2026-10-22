@@ -29,10 +29,11 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
 - [ ] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.
   Test first: `RequestHasherTest` (key order, whitespace, nested `metadata`, different values → different hash).
 - [ ] T6 (AC-10, AC-11, AC-14) Ports and JPA adapters (`PaymentRepository`, `PaymentJournal`), `TraceContext` port +
-  `MicrometerTraceContext`, `PaymentStatusApplier` with `sequence_no = max + 1`, `@Version`, retry on an optimistic
-  lock or sequence collision (bounded).
+  `MicrometerTraceContext`, `PaymentStatusApplier` with `sequence_no = max + 1` (`max` read in one query with the
+  payment), `@Version`, retry on an optimistic lock or sequence collision (bounded).
   Tests first: `PaymentStatusApplierIT` (sequence, statuses and failure code, rollback on failed event insert, rejected
-  and conflicting duplicate journaled, identical duplicate not, two threads on one `PROCESSING` payment);
+  and conflicting duplicate journaled, identical duplicate not, two threads on one `PROCESSING` payment, a rejection
+  decided on a stale status while another thread commits);
   `CodedValueDomainsIT` (every constant of `PaymentStatus`, `FailureCode`, `EventType`, `ActorType`, `EventSource`,
   `ProviderOutcome` is accepted by its domain; the actor/source pairs by the pair check).
 
