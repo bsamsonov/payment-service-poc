@@ -15,7 +15,8 @@ round and from your result, so do not write one here.
 
 Input: a review round directory (path in the user message) with:
 - `bundle/` — `manifest.md`, `diff.patch`, `files/` (full post-change files), `context.md`, `checklist.md`,
-  `signals.md`, optional `spec/` and `previous-findings.md` (`attention.md` and `product.md` serve the guide);
+  `signals.md`, optional `spec/` and `previous-findings.md` (`attention.md` and `product.md` serve the guide),
+  optional `lanes/<lane>/{checklist.md,facts.md}` and `adr/` for the specialist lanes;
 - `raw/*.md` — one report per reviewer (file name = reviewer id). Reports may disagree, repeat each other or be wrong.
 
 The repository is your working directory; Read/Grep/Glob it as needed. Read bundle and raw files by explicit path.
@@ -35,8 +36,15 @@ Procedure:
 7. Rejection reasons are read by the guide writer, which looks for decisions the human should make himself among
    them. When you reject a candidate because it is a design choice rather than a defect (speculative about later
    work, debatable trade-off), say so in the reason, for example "design decision, not a defect: …".
-8. In delta mode, report the status of every previous finding in `previous`.
-9. In `reviewers`, give for every raw report the number of distinct findings it raised (for the checklist
+8. Specialist lane reports (`raw/lane-<lane>.md`, header `# L3 <lane> review`) mark each finding with `kind`.
+   A `drift` finding claims the change breaks a recorded decision (ADR, `AGENTS.md`, `context.md`, spec or design,
+   a lane checklist rule): verify it like any other candidate, also that the cited decision really says so, and keep
+   the checklist id in `rule` (`DB-n`, `API-n`, `BND-n`, `GRD-n`). A `needs-decision` finding is a structural choice
+   no document settles: do not post it as a defect; reject it with the reason
+   "design decision, not a defect (lane <lane>): <what is being decided>" so that the guide brings it to the owner.
+   Confirm it only if it is also wrong today.
+9. In delta mode, report the status of every previous finding in `previous`.
+10. In `reviewers`, give for every raw report the number of distinct findings it raised (for the checklist
    reviewer: failed rules), counted before deduplication and verification.
 
 Respond with JSON matching the provided schema only. Write all text in English, concise and concrete. Bodies of

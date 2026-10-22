@@ -21,6 +21,10 @@ jobs:
       - uses: actions/checkout@v7
       - name: Test the AC traceability check
         run: scripts/spec/test-check-ac-trace.sh
+      - name: Test the triggers of the review lanes
+        run: scripts/review/test-lanes.sh
+      - name: Test the reviewer configuration and the quorum of the review
+        run: scripts/review/test-reviewers.sh
       - name: Check AC-to-test traceability (specs/ ↔ @DisplayName)
         run: scripts/spec/check-ac-trace.sh
       - uses: actions/setup-java@v6

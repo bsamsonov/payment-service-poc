@@ -98,6 +98,10 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 ## Review
 - Every PR gets an AI review (`/pr-review`) before human review. Each finding is closed with a fix commit or a
   reply explaining why it is not a bug; the next round reviews only new commits (`--delta`).
+- When a PR touches migrations, the API contract, module or layer boundaries, or the checks themselves (rules,
+  analyzers, CI, agent rules), `/pr-review` adds a specialist lane that checks it against the ADRs, this file and the
+  spec/design. A structural choice no document settles goes to the owner, so record such decisions (ADR, design)
+  before relying on them.
 - Review rules: `docs/review-checklist.md` (`RC-NN`); what deserves the human's attention:
   `docs/review-attention.md`; facts for reviewers: `docs/review-context.md` — update it
   together with this file.
