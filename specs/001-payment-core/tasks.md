@@ -41,7 +41,7 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
 If it grows past ~600 lines: T7–T8 and T9–T10 as two PRs.
 - [ ] T7 (AC-1, AC-13, AC-15, AC-17) `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`),
   `FakePaymentProvider` (success path), `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`.
-  Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 column and event), `ProviderCallTransactionIT` (AC-13).
+  Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column), `ProviderCallTransactionIT` (AC-13).
 - [ ] T8 (AC-2, AC-3, AC-4) Remaining provider outcomes: `DECLINED` → `402`, `REJECTED` → `502` + ERROR log,
   `UNKNOWN` → `202` `PROCESSING`; `FailureMessages` dictionary; fake provider table complete.
   Tests first: `CreatePaymentIT` cases (parameterized declines, `OutputCaptureExtension`, timeout).

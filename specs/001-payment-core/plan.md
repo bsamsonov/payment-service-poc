@@ -126,7 +126,7 @@ Generated sources are excluded from Spotless, Error Prone/NullAway, SpotBugs and
 | AC-14 | IT: two threads + `CountDownLatch` on one `PROCESSING` payment → one applied, one rejected, no exception; same for two rejected transitions (sequence collision) | `PaymentStatusApplierIT` |
 | AC-15 | IT | `CreatePaymentIT` |
 | AC-16 | IT with and without `traceparent` | `TracingIT` |
-| AC-17 | unit (canonicalization cases) + IT (column and event) | `RequestHasherTest`, `CreatePaymentIT` |
+| AC-17 | unit (canonicalization cases) + IT (`payments` column) | `RequestHasherTest`, `CreatePaymentIT` |
 
 Traceability (see `specs/README.md`): every test that covers an AC carries the id in `@DisplayName`, e.g.
 `@DisplayName("001/AC-2: declined card returns 402")` (several: `"001/AC-10, 001/AC-14: …"`);
