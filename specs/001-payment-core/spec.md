@@ -1,7 +1,7 @@
 ---
 id: 001
 title: Payment core
-status: Draft  # Draft | Approved | Implemented | Superseded
+status: Approved  # Draft | Approved | Implemented | Superseded
 issue: "—"
 supersedes: []
 amends: []
