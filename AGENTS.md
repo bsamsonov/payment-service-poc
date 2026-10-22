@@ -18,6 +18,7 @@ Spring Security (JWT), Testcontainers, WireMock, Maven wrapper.
 | Code smells report, never fails (PMD/CPD, [details](docs/code-smells.md)) | `./mvnw verify -Psmells -DskipTests` |
 | Install git hooks (once per clone) | `lefthook install` |
 | AC-to-test traceability (also in CI) | `scripts/spec/check-ac-trace.sh` |
+| ER diagram of the schema from Flyway migrations, changes highlighted (needs Docker) | `scripts/db/db_diagram.py [--pr <n>] --out <file.md>` (Claude Code: `/db-diagram`) |
 | AI review of a pull request | `scripts/review/pr-review.sh <pr> [--delta]` (Claude Code: `/pr-review <pr>`) |
 
 Integration tests (`*IT`) need Docker (Testcontainers).
