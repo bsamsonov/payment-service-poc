@@ -28,6 +28,10 @@ repository. A rule written there and broken here is `drift`; a dependency or pla
 - BND-9 The shared kernel (money, identifiers, clock) stays small, stable and free of module logic; growth of shared
   code is a finding unless the design names it.
 
+- BND-9a A change of more than one module at once ("Modules touched" in `facts.md`) is named in the design or plan,
+  or each module's part has its own reason in the PR; otherwise `needs-decision` — split the PR, or the owner
+  accepts the coupled change.
+
 ## Placement and language
 - BND-10 New code lives in the module and layer the design names (package table of the plan/design); code added but
   not named there is reported.
