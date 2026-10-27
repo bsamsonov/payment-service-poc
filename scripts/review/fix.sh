@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Auto-fix of the findings confirmed by the aggregator: one review-fixer run per finding in a worktree of the PR
 # branch, one commit per fixed finding, then a fast-forward push to the PR branch.
-#   fixes.json  — per finding: fixed (commit sha) | not_fixed | owner (the fix needs the owner) + reason; push result
+#   fixes.json  — per finding: fixed (commit sha, test_sha when tests changed) | not_fixed | owner (the fix needs
+#                 the owner) + reason; push result
 #   stats.tsv   — `fixer` row (found = findings tried, confirmed = fixed, rejected = not fixed or rolled back,
 #                 decisions = handed to the owner)
 #   report.md   — "Auto-fix" section
 #
 # A fix is kept only if the fixer reports it fixed, the change passes lanes.py --protected (no guards, spec, ADRs,
-# API contract or migrations from the base branch; no suppressions, no removed tests), the commit hooks accept it
-# and the fast check is green. Otherwise it is rolled back and the finding stays with the owner.
+# API contract or migrations from the base branch; no suppressions; existing tests only grow), the commit hooks accept
+# it and the fast check is green. Otherwise it is rolled back and the finding stays with the owner.
+# A fix that also touches tests becomes two commits: `fix(…)` with the code, then `test(…)` with the tests, so that
+# test changes are always reviewed apart. The code commit alone is green: existing tests may only get lines added,
+# so they still compile and pass without the test commit.
 # Review threads are never resolved here: the owner checks the fix commit and resolves the thread.
 #
 # Usage: scripts/review/fix.sh <round-dir> [--force]
@@ -98,11 +102,14 @@ git -C "$REPO_ROOT" worktree add -q --detach "$wt" "$head_sha"
 
 prompt_body="$(agent_body "$REPO_ROOT/.claude/agents/review-fixer.md")"
 items='[]' total_secs=0 total_cost=0
-add_item() {  # add_item <id> <status> <sha> <reason> <files-json> <seconds> <cost>
+add_item() {  # add_item <id> <status> <sha> <reason> <files-json> <seconds> <cost> [<test-sha>]
   items="$(jq --arg id "$1" --arg s "$2" --arg sha "$3" --arg r "$4" --argjson f "$5" --arg sec "$6" --arg c "$7" \
-    '. + [{id: $id, status: $s, sha: $sha, reason: $r, files: $f, seconds: ($sec | tonumber), cost_usd: $c}]' <<<"$items")"
-  log "  $1: $2${3:+ ${3:0:7}} — $4"
+    --arg tsha "${8:-}" \
+    '. + [{id: $id, status: $s, sha: $sha, test_sha: $tsha, reason: $r, files: $f, seconds: ($sec | tonumber),
+           cost_usd: $c}]' <<<"$items")"
+  log "  $1: $2${3:+ ${3:0:7}}${8:+ + ${8:0:7}} — $4"
 }
+
 rollback_to() { git -C "$wt" reset -q --hard "$1"; git -C "$wt" clean -qfd; }
 
 # Most severe first: later fixes build on earlier ones.
@@ -157,10 +164,33 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
   summary="$(jq -r .summary <<<"$answer" | tr '\n' ' ' | sed 's/[[:space:]]*$//; s/\.$//')"
   max=$(( 72 - ${#prefix} - ${#suffix} ))
   (( ${#summary} > max )) && summary="${summary:0:max}"
+  about="/pr-review finding $id ($(jq -r .severity <<<"$finding")): $(jq -r .title <<<"$finding")"
+  # Code first, tests in a commit of their own (see the header).
   git -C "$wt" add -A
-  if ! git -C "$wt" commit -q -m "$prefix$summary$suffix" \
-       -m "Auto-fix of /pr-review finding $id ($(jq -r .severity <<<"$finding")): $(jq -r .title <<<"$finding")" \
-       >"$round_dir/logs/fixer-$fid.commit.log" 2>&1; then
+  git -C "$wt" reset -q -- src/test 2>/dev/null || true
+  fix_sha="" test_sha="" committed=true
+  if ! git -C "$wt" diff --cached --quiet; then
+    git -C "$wt" commit -q -m "$prefix$summary$suffix" -m "Auto-fix of $about" \
+      >"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
+    fix_sha="$(git -C "$wt" rev-parse HEAD)"
+  fi
+  if [[ "$committed" == true ]]; then
+    git -C "$wt" add -A
+    if ! git -C "$wt" diff --cached --quiet; then
+      if [[ -z "$fix_sha" ]]; then  # the finding was in the tests themselves
+        test_subject="test${scope:+($scope)}: $summary$suffix"
+      else
+        test_subject="test${scope:+($scope)}: cover the auto-fix of $id"
+      fi
+      git -C "$wt" commit -q -m "$test_subject" \
+        -m "Test changes of the auto-fix of $about${fix_sha:+ (code: ${fix_sha:0:7})}. Kept apart from the code so that
+test changes are reviewed on their own; existing tests may only get lines added (lanes.py --protected)." \
+        >>"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
+      test_sha="$(git -C "$wt" rev-parse HEAD)"
+      [[ -n "$fix_sha" ]] || { fix_sha="$test_sha" test_sha=""; }
+    fi
+  fi
+  if [[ "$committed" != true ]]; then
     rollback_to "$before"
     add_item "$id" not_fixed "" "commit hooks rejected the fix (see logs/fixer-$fid.commit.log)" "$files" "$secs" "$cost"; continue
   fi
@@ -174,7 +204,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
     add_item "$id" not_fixed "" "fast check failed after the fix (see logs/fixer-$fid.verify.log)" "$files" \
       "$(( SECONDS - start ))" "$cost"; continue
   fi
-  add_item "$id" fixed "$(git -C "$wt" rev-parse HEAD)" "$reason" "$files" "$(( SECONDS - start ))" "$cost"
+  add_item "$id" fixed "$fix_sha" "$reason" "$files" "$(( SECONDS - start ))" "$cost" "$test_sha"
 done
 
 head_after="$(git -C "$wt" rev-parse HEAD)" pushed=false push_error=""

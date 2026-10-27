@@ -97,9 +97,11 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 
 ## Review
 - Every PR gets an AI review (`/pr-review`) before human review. Confirmed findings are fixed automatically: one
-  `fix(<scope>): … (R<n>-F<k>)` commit per finding pushed to the PR branch, then one delta round over the fixes.
-  What the fixer did not fix (it declined, the fix touched the spec, contract, guards or an existing migration, or
-  the fast check failed) is closed by hand with a fix commit or a reply explaining why it is not a bug; the next
+  `fix(<scope>): … (R<n>-F<k>)` commit per finding (its test changes in a separate `test(<scope>): …` commit)
+  pushed to the PR branch, then one delta round over the fixes. Existing tests may only grow in an auto-fix.
+  What the fixer did not fix (it declined; the fix touched
+  the spec, contract, guards or an existing migration, changed or switched off an existing test; or the fast check
+  failed) is closed by hand with a fix commit or a reply explaining why it is not a bug; the next
   round reviews only new commits (`--delta`). The owner resolves every thread, including auto-fixed ones.
 - When a PR touches migrations, the API contract, module or layer boundaries, or the checks themselves (rules,
   analyzers, CI, agent rules), `/pr-review` adds a specialist lane that checks it against the ADRs, this file and the
