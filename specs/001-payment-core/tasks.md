@@ -24,7 +24,7 @@ updates the living docs its change affects; the last one sets `status: Implement
 
 ## PR B — domain, journal, status applier (AC-10, AC-11, AC-14, AC-17)
 
-- [ ] T4 (AC-10) Domain: `PaymentId`/event ids (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` transition table,
+- [x] T4 (AC-10) Domain: `PaymentId`/event ids (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` transition table,
   `FailureCode`, `ProviderOutcome`, `Payment.apply` → `Applied | NoOp | Rejected` (incl. `conflicting_duplicate`).
   Tests first: `PaymentStatusTest` (full table), `PaymentTest`, `CurrencyPolicyTest` (unit part of AC-6).
 - [ ] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.

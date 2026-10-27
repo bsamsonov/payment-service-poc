@@ -29,6 +29,9 @@ Status applier algorithm (AC-10, AC-11, AC-14): load the payment and `max(sequen
 `Applied`/`Rejected` append event with `sequence_no = max + 1` → save (only `Applied` changes `payments`) → commit.
 `max` read after the decision could already include a concurrent transition, so a `Rejected` event computed from a
 stale status would get the next free number and no conflict; read with the payment, it collides with that transition.
+Reason codes of `TRANSITION_REJECTED`: `transition_not_allowed` (backward or out of a terminal state) and
+`conflicting_duplicate`; `STATUS_CHANGED` has none. Rule codes of `422` violations (`CurrencyPolicy`, `AUDIT` log):
+`amount_below_minimum`, `amount_too_many_digits`, `currency_not_allowed`.
 On `ObjectOptimisticLockingFailureException` or a violation of `payment_events_sequence_unique`: re-read and
 re-apply, at most 3 attempts, then fail loudly (ERROR log; the payment stays in its last committed state).
 
