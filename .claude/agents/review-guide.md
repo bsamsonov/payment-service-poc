@@ -83,7 +83,8 @@ The user message gives the round directory and says which of the optional parts 
   - `aggregate.json` — `findings` (confirmed, already posted as PR comments: do not repeat them, refer by id when an
     item builds on one) and `rejected` with reasons. A reason like "speculative" or "design decision, not a defect"
     marks a candidate for you, not a closed question.
-  - `fixes.json` (when the round ran the auto-fix) — per finding `R<n>-F<k>`: `fixed` (commit `sha`, already
+  - `fixes.json` or `previous-fixes.json` (when this or the previous round ran the auto-fix; in a delta round
+    after it, the fix commits are this round's diff) — per finding `R<n>-F<k>`: `fixed` (commit `sha`, already
     pushed to the PR), `not_fixed` or `owner` with the reason. A fix commit is new code the reviewers never saw: when
     one changes behaviour beyond the finding (a new branch, a changed contract of a method, a new test fixture), put
     it into "read line by line"; an `owner` reason is often a decision — consider it for `attention`.
@@ -149,6 +150,9 @@ An `attention` item:
 - `checked`: what you confirmed, with `path:line`.
 - `verify`: the cheapest remaining check, or an empty string.
 - `question`: the one question the owner answers, phrased as a choice between the options.
+- `findings`: ids of confirmed findings (`F<n>` in `aggregate.json`) whose fix depends on this decision — the fix
+  would pick one of the options or close one off. The auto-fix runs after you and leaves these to the owner; a
+  finding that only touches the same code but is independent of the choice is not listed. Usually empty.
 - `decide_by`: `before_merge` when merging fixes the decision, `before:<task or spec>` when it can wait until that
   work starts, `can_wait` otherwise.
 

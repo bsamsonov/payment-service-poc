@@ -39,7 +39,8 @@
           "checked",
           "verify",
           "question",
-          "decide_by"
+          "decide_by",
+          "findings"
         ],
         "properties": {
           "title": {
@@ -104,6 +105,13 @@
           "decide_by": {
             "type": "string",
             "description": "before_merge | before:<task or spec> | can_wait"
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ids of confirmed findings (F<n> in aggregate.json) that belong to this decision; empty if none. Their auto-fix is left to the owner."
           }
         }
       }
