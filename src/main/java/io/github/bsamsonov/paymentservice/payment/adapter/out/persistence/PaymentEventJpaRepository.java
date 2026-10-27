@@ -12,5 +12,7 @@ interface PaymentEventJpaRepository extends Repository<PaymentEventEntity, UUID>
 
     PaymentEventEntity save(PaymentEventEntity entity);
 
+    PaymentEventEntity saveAndFlush(PaymentEventEntity entity);
+
     Optional<PaymentEventEntity> findById(UUID id);
 }

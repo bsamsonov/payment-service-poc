@@ -29,7 +29,7 @@ updates the living docs its change affects; the last one sets `status: Implement
   Tests first: `PaymentStatusTest` (full table), `PaymentTest`, `CurrencyPolicyTest` (unit part of AC-6).
 - [x] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.
   Test first: `RequestHasherTest` (key order, whitespace, nested `metadata`, different values → different hash).
-- [ ] T6 (AC-10, AC-11, AC-14) Ports and JPA adapters (`PaymentRepository`, `PaymentJournal`), `TraceContext` port +
+- [x] T6 (AC-10, AC-11, AC-14) Ports and JPA adapters (`PaymentRepository`, `PaymentJournal`), `TraceContext` port +
   `MicrometerTraceContext`, `PaymentStatusApplier` with `sequence_no = max + 1` (`max` read in one query with the
   payment), `@Version`, retry on an optimistic lock or sequence collision (bounded).
   Tests first: `PaymentStatusApplierIT` (sequence, statuses and failure code, rollback on failed event insert, rejected
