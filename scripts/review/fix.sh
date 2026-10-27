@@ -8,8 +8,8 @@
 #   report.md   — "Auto-fix" section
 #
 # A fix is kept only if the fixer reports it fixed, the change passes lanes.py --protected (no guards, spec, ADRs,
-# API contract or migrations from the base branch; no suppressions; existing tests only grow), the commit hooks accept
-# it and the fast check is green. Otherwise it is rolled back and the finding stays with the owner.
+# API contract, migrations, ports, package-info, port implementations and their wiring, main code of more than one
+# module; no suppressions; existing tests only grow), the commit hooks accept it and the fast check is green. Otherwise it is rolled back and the finding stays with the owner.
 # A fix that also touches tests becomes two commits: `fix(…)` with the code, then `test(…)` with the tests, so that
 # test changes are always reviewed apart. The code commit alone is green: existing tests may only get lines added,
 # so they still compile and pass without the test commit.

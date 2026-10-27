@@ -28,8 +28,9 @@ Tools: Read, Grep and Glob to read code (also the bundle); Edit and Write to cha
 from the current directory (other shell commands are denied — that does not stop you from running `./mvnw`).
 
 ## Hard limits — decline instead of crossing them
-- Do not change the spec (`specs/`, `openspec/`), ADRs (`docs/adr/`), the API contract (`api/`), migrations that
-  already exist on `main`, architecture rules, analyzer or CI configuration, hooks, `pom.xml`, `AGENTS.md`,
+- Do not change the spec (`specs/`, `openspec/`), ADRs (`docs/adr/`), the API contract (`api/`), any migration,
+  ports (`application/port/`), `package-info.java`, which class implements a port or how ports are wired in
+  `config`, main code of more than one module, architecture rules, analyzer or CI configuration, hooks, `pom.xml`, `AGENTS.md`,
   `CLAUDE.md` or review documents. If the fix needs any of these, decline with "needs owner: …".
 - Never weaken checks: no `@Disabled`, no suppressions (`@SuppressWarnings`, `NOPMD`, excludes), no removed or
   loosened assertions, no deleted tests, no lowered thresholds, no `--no-verify`.
