@@ -26,14 +26,17 @@ Module `io.github.bsamsonov.paymentservice.payment`; package names below are rel
 
 Status applier algorithm (AC-10, AC-11, AC-14): load the payment and `max(sequence_no)` of its events in one query
 (one snapshot, before the decision) → `payment.apply(target, data)` returns `Applied | NoOp | Rejected` → for
-`Applied`/`Rejected` append event with `sequence_no = max + 1` → save (only `Applied` changes `payments`) → commit.
+`Applied` save the payment → for `Applied`/`Rejected` append the event with `sequence_no = max + 1` → commit. Saving first
+means a failed event insert rolls back a real change (AC-11); both writes are flushed at once, so a concurrent change
+fails there: the payment on `@Version`, the event on the unique key.
 `max` read after the decision could already include a concurrent transition, so a `Rejected` event computed from a
 stale status would get the next free number and no conflict; read with the payment, it collides with that transition.
 Reason codes of `TRANSITION_REJECTED`: `transition_not_allowed` (backward or out of a terminal state) and
 `conflicting_duplicate`; `STATUS_CHANGED` has none. Rule codes of `422` violations (`CurrencyPolicy`, `AUDIT` log):
 `amount_below_minimum`, `amount_too_many_digits`, `currency_not_allowed`.
-On `ObjectOptimisticLockingFailureException` or a violation of `payment_events_sequence_unique`: re-read and
-re-apply, at most 3 attempts, then fail loudly (ERROR log; the payment stays in its last committed state).
+On `ObjectOptimisticLockingFailureException` or a violation of `payment_events_sequence_unique` (the persistence
+adapter turns both into the port's `PaymentConcurrencyConflict`, so `application` knows no JPA): re-read and
+re-apply in a new transaction, at most 3 attempts, then fail loudly (ERROR log; the payment stays in its last committed state).
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:
