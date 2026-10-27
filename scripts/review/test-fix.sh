@@ -12,7 +12,7 @@ export GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER
 failures=0
 fail() { echo "FAIL $*"; failures=$((failures + 1)); }
 
-# Stub fixer: what it does depends on the finding id in the prompt; an unknown id (F7) crashes with no output.
+# Stub fixer: what it does depends on the finding id in the prompt.
 mkdir -p "$work/bin"
 cat >"$work/bin/claude" <<'STUB'
 #!/usr/bin/env bash
@@ -28,6 +28,10 @@ case "$id" in
   *-F4) touch BROKEN; answer fixed "breaks the build" ;;
   *-F5) answer declined "stale: already fixed at this commit" ;;
   *-F6) printf '@Disabled\nclass ATest {}\n' >src/ATest.java; answer fixed "flaky test" ;;
+  *-F7) echo "class C { int fixed; }" >src/C.java; echo "  @Test void more() {}" >>src/test/ExistingTest.java
+        echo "class CTest {}" >src/test/CTest.java; answer fixed "code plus tests that only grow" ;;
+  *-F8) sed -i 's/assertEquals(1, a)/assertEquals(2, a)/' src/test/ExistingTest.java; answer fixed "changed assertion" ;;
+  *-F11) echo "  @Test void skipped() { assumeTrue(false); }" >>src/test/ExistingTest.java; answer fixed "assumption" ;;
   *)    exit 1 ;;
 esac
 STUB
@@ -43,10 +47,11 @@ export PATH="$work/bin:$PATH" PR_REVIEW_FIX_VERIFY='test ! -f BROKEN' PR_REVIEW_
 git init -q --bare -b main "$work/remote.git"
 git clone -q "$work/remote.git" "$work/repo" 2>/dev/null
 cd "$work/repo"
-mkdir -p scripts src specs/001 .claude/agents
+mkdir -p scripts src/test specs/001 .claude/agents
 cp -r "$SRC/scripts/review" scripts/
 cp "$SRC/.claude/agents/review-fixer.md" .claude/agents/
 echo "class A {}" >src/A.java
+printf 'class ExistingTest {\n  @Test void one() { assertEquals(1, a); }\n' >src/test/ExistingTest.java
 echo "spec" >specs/001/spec.md
 printf '.review/\n' >.gitignore
 git add -A && git commit -qm base && git push -q origin main
@@ -58,10 +63,10 @@ round=".review/1/1"
 new_round() {
   rm -rf .review/1 && mkdir -p "$round/bundle" "$round/logs"
   jq -n --arg h "$head" '{pr: 1, round: 1, mode: "full", head_sha: $h, base_ref: "main"}' >"$round/meta.json"
-  jq -n '{findings: [range(1; 8) | {id: "F\(.)", severity: (if . == 1 then "major" else "minor" end), rule: "",
+  jq -n '{findings: [range(1; 12) | {id: "F\(.)", severity: (if . == 1 then "major" else "minor" end), rule: "",
           title: "t\(.)", path: "src/A.java", line: 1, body: "b", sources: ["bugs-opus"], in_diff: true}],
-          rejected: [], previous: [], reviewers: [{id: "bugs-opus", raw_findings: 7}]}' >"$round/aggregate.json"
-  printf 'pr\tround\treviewer\tfound\tconfirmed\n1\t1\tbugs-opus\t7\t7\n' >"$round/stats.tsv"
+          rejected: [], previous: [], reviewers: [{id: "bugs-opus", raw_findings: 11}]}' >"$round/aggregate.json"
+  printf 'pr\tround\treviewer\tfound\tconfirmed\n1\t1\tbugs-opus\t11\t11\n' >"$round/stats.tsv"
   printf '# report\n' >"$round/report.md"
 }
 status_of() { jq -r --arg id "$1" '.items[] | select(.id == $id) | .status' "$round/fixes.json"; }
@@ -69,18 +74,32 @@ status_of() { jq -r --arg id "$1" '.items[] | select(.id == $id) | .status' "$ro
 # 1. All outcomes in one round, pushed.
 new_round
 scripts/review/fix.sh "$round" 2>"$work/err" || { fail "fix.sh exit $?"; cat "$work/err"; }
-for pair in R1-F1:fixed R1-F2:owner R1-F3:owner R1-F4:not_fixed R1-F5:not_fixed R1-F6:owner R1-F7:not_fixed; do
+for pair in R1-F1:fixed R1-F2:owner R1-F3:owner R1-F4:not_fixed R1-F5:not_fixed R1-F6:owner R1-F7:fixed \
+            R1-F8:owner R1-F9:not_fixed R1-F10:not_fixed R1-F11:owner; do
   [[ "$(status_of "${pair%%:*}")" == "${pair#*:}" ]] || fail "status of ${pair%%:*}: $(status_of "${pair%%:*}"), want ${pair#*:}"
 done
 jq -e '.pushed' "$round/fixes.json" >/dev/null || fail "not pushed: $(jq -r .push_error "$round/fixes.json")"
 git fetch -q origin
-[[ "$(git rev-list --count "$head"..origin/feat/x)" == 1 ]] || fail "expected one fix commit on feat/x"
-subject="$(git log -1 --format=%s origin/feat/x)"
+[[ "$(git rev-list --count "$head"..origin/feat/x)" == 3 ]] || fail "expected three commits on feat/x (F1; F7 code + tests)"
+subject="$(git log -1 --format=%s origin/feat/x~2)"
 [[ "$subject" == "fix(payment): guard the stale read with the event version (R1-F1)" ]] || fail "subject: $subject"
+# F7: the code and the tests are separate commits, the code commit holds no test file.
+[[ "$(git log -1 --format=%s origin/feat/x)" == "test(payment): cover the auto-fix of R1-F7" ]] \
+  || fail "test commit subject: $(git log -1 --format=%s origin/feat/x)"
+git diff --name-only origin/feat/x~2 origin/feat/x~1 | grep -q '^src/test/' && fail "F7 code commit touches tests"
+[[ "$(git diff --name-only origin/feat/x~1 origin/feat/x | sort | paste -sd' ')" == "src/test/CTest.java src/test/ExistingTest.java" ]] \
+  || fail "F7 test commit files: $(git diff --name-only origin/feat/x~1 origin/feat/x | paste -sd' ')"
+jq -e '.items[] | select(.id == "R1-F7") | (.sha | length) == 40 and (.test_sha | length) == 40 and .sha != .test_sha' \
+  "$round/fixes.json" >/dev/null || fail "F7 shas in fixes.json"
+for pair in R1-F8:"existing test changed" R1-F11:"switched off at run time"; do
+  jq -r --arg id "${pair%%:*}" '.items[] | select(.id == $id) | .reason' "$round/fixes.json" | grep -q "${pair#*:}" \
+    || fail "reason of ${pair%%:*}: $(jq -r --arg id "${pair%%:*}" '.items[] | select(.id == $id) | .reason' "$round/fixes.json")"
+done
+
 [[ "$(git show origin/feat/x:src/A.java)" == "class A { int fixed; }" ]] || fail "fix content"
 git show origin/feat/x:specs/001/spec.md | grep -q changed && fail "protected change reached the branch"
 [[ -d "$round/worktree" ]] && fail "worktree kept after push"
-grep -qP '^1\t1\tfixer\t7\t1\tfix\tok\t' "$round/stats.tsv" || fail "stats row: $(grep fixer "$round/stats.tsv")"
+grep -qP '^1\t1\tfixer\t11\t2\tfix\tok\t' "$round/stats.tsv" || fail "stats row: $(grep fixer "$round/stats.tsv")"
 grep -q '^## Auto-fix' "$round/report.md" || fail "report section"
 
 # 2. A second run of the same round does nothing without --force.

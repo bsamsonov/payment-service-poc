@@ -67,8 +67,8 @@ if [[ "$guide_only" == false ]]; then
       def fix: $fixed["R\($round)-\(.id)"] as $f
         | if $f == null then ""
           elif $f.status == "fixed" then
-            "\n\n**Auto-fixed in `\($f.sha[:7])`**\(if $fx.pushed then "" else " (not pushed: \($fx.push_error))" end)" +
-            " — \($f.reason). Please check the fix commit and resolve this thread."
+            "\n\n**Auto-fixed in `\($f.sha[:7])`\(if ($f.test_sha // "") != "" then ", tests in `\($f.test_sha[:7])`" else "" end)**\(if $fx.pushed then "" else " (not pushed: \($fx.push_error))" end)" +
+            " — \($f.reason). Please check the fix commit(s) and resolve this thread."
           elif $f.status == "owner" then "\n\n**Not auto-fixed — needs the owner:** \($f.reason)"
           else "\n\n**Not auto-fixed:** \($f.reason)" end;
       def foot: fix + "\n\n<sub>/pr-review round \($round) · reported by: \(.sources | join(", "))</sub>";

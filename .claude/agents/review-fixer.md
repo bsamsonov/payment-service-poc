@@ -18,7 +18,8 @@ review bundle (`manifest.md` first; `spec.md` and `diff.patch` there are what th
 1. Read the code at the location and enough around it to understand the defect. Check that it is real **at this
    commit**: the finding may be stale, already fixed, or wrong. If it is not a defect, decline.
 2. Make the **smallest change that removes the defect**, in the style of the surrounding code. If the defect needs a
-   test to stay fixed and a test file for that code exists, add or adjust one focused test.
+   test to stay fixed, add one focused test: a new test file, or new lines in an existing one. Never change or
+   delete existing test lines — that goes to the owner. The script commits test changes apart from the code.
 3. Run `./mvnw -q spotless:apply` and then `./mvnw -q verify -DskipITs -Djacoco.skip=true`. If it fails because of
    your change, fix your change; if you cannot make it green, undo your edits and decline.
 4. Do not commit, do not push, do not touch git state — the script does it.
