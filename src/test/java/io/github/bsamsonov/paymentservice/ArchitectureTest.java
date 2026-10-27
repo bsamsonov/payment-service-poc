@@ -22,7 +22,7 @@ class ArchitectureTest {
     private static final HexagonRules PAYMENT = new HexagonRules(ROOT + ".payment");
 
     @ArchTest
-    static final ArchRule noFieldInjection = NO_CLASSES_SHOULD_USE_FIELD_INJECTION.allowEmptyShould(true);
+    static final ArchRule noFieldInjection = NO_CLASSES_SHOULD_USE_FIELD_INJECTION;
 
     @ArchTest
     static final ArchRule noStandardStreams = NO_CLASSES_SHOULD_ACCESS_STANDARD_STREAMS;
@@ -36,48 +36,46 @@ class ArchitectureTest {
     // allowEmptyShould(true) marks a rule whose package does not exist yet. Remove it in the PR that adds the package.
 
     @ArchTest
-    static final ArchRule m01 = MODULES.everyClassBelongsToAModule().allowEmptyShould(true);
+    static final ArchRule m01 = MODULES.everyClassBelongsToAModule();
 
     @ArchTest
-    static final ArchRule m02 = MODULES.modulesAreFreeOfCycles().allowEmptyShould(true);
+    static final ArchRule m02 = MODULES.modulesAreFreeOfCycles();
 
     // Module payment.
 
     @ArchTest
-    static final ArchRule paymentH01 = PAYMENT.domainIsPlainJava().allowEmptyShould(true);
+    static final ArchRule paymentH01 = PAYMENT.domainIsPlainJava();
 
     @ArchTest
-    static final ArchRule paymentH02 =
-            PAYMENT.applicationKnowsNoAdaptersAndNoTechnology().allowEmptyShould(true);
+    static final ArchRule paymentH02 = PAYMENT.applicationKnowsNoAdaptersAndNoTechnology();
 
     @ArchTest
-    static final ArchRule paymentH03 = PAYMENT.portsSpeakDomainLanguage().allowEmptyShould(true);
+    static final ArchRule paymentH03 = PAYMENT.portsSpeakDomainLanguage();
 
     @ArchTest
-    static final ArchRule paymentH04 = PAYMENT.webDoesNotUsePorts().allowEmptyShould(true);
+    static final ArchRule paymentH04 = PAYMENT.webDoesNotUsePorts();
 
     @ArchTest
-    static final ArchRule paymentH05 = PAYMENT.adaptersDoNotDependOnEachOther().allowEmptyShould(true);
+    static final ArchRule paymentH05 = PAYMENT.adaptersDoNotDependOnEachOther();
 
     @ArchTest
-    static final ArchRule paymentH06 = PAYMENT.adapterClassesAreNotPublic().allowEmptyShould(true);
+    static final ArchRule paymentH06 = PAYMENT.adapterClassesAreNotPublic();
 
     @ArchTest
-    static final ArchRule paymentH07 = PAYMENT.generatedApiStaysInWebAdapter().allowEmptyShould(true);
+    static final ArchRule paymentH07 = PAYMENT.generatedApiStaysInWebAdapter();
 
     @ArchTest
-    static final ArchRule paymentH08 = PAYMENT.endpointsComeFromTheContract().allowEmptyShould(true);
+    static final ArchRule paymentH08 = PAYMENT.endpointsComeFromTheContract();
 
     @ArchTest
-    static final ArchRule paymentH09 = PAYMENT.jpaStaysInPersistenceAdapter().allowEmptyShould(true);
+    static final ArchRule paymentH09 = PAYMENT.jpaStaysInPersistenceAdapter();
 
     @ArchTest
     static final ArchRule paymentH10 = PAYMENT.webStereotypesStayInWebAdapter().allowEmptyShould(true);
 
     @ArchTest
-    static final ArchRule paymentH11 =
-            PAYMENT.onlyTheApplicationClassSeesConfig().allowEmptyShould(true);
+    static final ArchRule paymentH11 = PAYMENT.onlyTheApplicationClassSeesConfig();
 
     @ArchTest
-    static final ArchRule paymentH12 = PAYMENT.noPackageCycles().allowEmptyShould(true);
+    static final ArchRule paymentH12 = PAYMENT.noPackageCycles();
 }
