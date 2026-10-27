@@ -50,11 +50,13 @@ mode="$(jq -r .mode "$round_dir/meta.json")"
 mkdir -p "$round_dir/logs"
 
 # Delta mode: the guide of the latest earlier round, so that the agent reports the status of its items.
-rm -f "$round_dir/previous-guide.json"
+rm -f "$round_dir/previous-guide.json" "$round_dir/previous-fixes.json"
 if [[ "$mode" == "delta" ]]; then
   for n in $(find "$REVIEW_ROOT/$pr" -mindepth 1 -maxdepth 1 -type d -regex '.*/[0-9]+' -printf '%f\n' | sort -rn); do
     (( n < round )) && [[ -f "$REVIEW_ROOT/$pr/$n/guide.json" ]] \
-      && { cp "$REVIEW_ROOT/$pr/$n/guide.json" "$round_dir/previous-guide.json"; break; }
+      && { cp "$REVIEW_ROOT/$pr/$n/guide.json" "$round_dir/previous-guide.json"
+           [[ -f "$REVIEW_ROOT/$pr/$n/fixes.json" ]] && cp "$REVIEW_ROOT/$pr/$n/fixes.json" "$round_dir/previous-fixes.json"
+           break; }
   done
 fi
 
@@ -63,6 +65,7 @@ compgen -G "$round_dir/raw/*.md" >/dev/null \
   && inputs+=("- AI reviewer reports: $(cd "$round_dir/raw" && ls -1 *.md | sed "s|^|\`$round_rel/raw/|; s|$|\`|" | paste -sd' ' -)")
 [[ -f "$round_dir/aggregate.json" ]] && inputs+=("- verified findings and rejections: \`$round_rel/aggregate.json\`")
 [[ -f "$round_dir/fixes.json" ]] && inputs+=("- auto-fix of the findings (fix commits, findings left to the owner): \`$round_rel/fixes.json\`")
+[[ -f "$round_dir/previous-fixes.json" ]] && inputs+=("- auto-fix of the previous round (its fix commits are in this delta): \`$round_rel/previous-fixes.json\`")
 [[ -f "$round_dir/previous-guide.json" ]] && inputs+=("- previous guide: \`$round_rel/previous-guide.json\`")
 (( ${#inputs[@]} )) || inputs+=("- no AI review results for this round")
 

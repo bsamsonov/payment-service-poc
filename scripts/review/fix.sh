@@ -13,6 +13,8 @@
 # A fix that also touches tests becomes two commits: `fix(…)` with the code, then `test(…)` with the tests, so that
 # test changes are always reviewed apart. The code commit alone is green: existing tests may only get lines added,
 # so they still compile and pass without the test commit.
+# Findings tied to an Architect's attention item of guide.json (listed in its `findings`, or on the same file within
+# PR_REVIEW_FIX_NEAR lines of it) are not fixed: they belong to that decision and go to the owner.
 # Review threads are never resolved here: the owner checks the fix commit and resolves the thread.
 #
 # Usage: scripts/review/fix.sh <round-dir> [--force]
@@ -20,7 +22,7 @@
 # Switched off by `fixer off` in reviewers.conf / .review/reviewers.local, PR_REVIEW_SKIP=fixer or PR_REVIEW_FIX=0.
 # Env: PR_REVIEW_FIX_MODEL (default opus), PR_REVIEW_FIX_EFFORT (default medium), PR_REVIEW_FIX_PUSH (1 | 0 — keep
 #      the commits in the worktree), PR_REVIEW_FIX_VERIFY (default: ./mvnw -q -B verify -DskipITs -Djacoco.skip=true),
-#      PR_REVIEW_TIMEOUT (per fixer run, seconds; default 1200)
+#      PR_REVIEW_TIMEOUT (per fixer run, seconds; default 1200), PR_REVIEW_FIX_NEAR (default 5; 0 — only `findings`)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude gh git jq timeout python3
@@ -109,7 +111,17 @@ add_item() {  # add_item <id> <status> <sha> <reason> <files-json> <seconds> <co
            cost_usd: $c}]' <<<"$items")"
   log "  $1: $2${3:+ ${3:0:7}}${8:+ + ${8:0:7}} — $4"
 }
-
+# The attention item a finding belongs to: "<n>. <title>", or empty. Needs guide.json of this round.
+guide_json="$round_dir/guide.json"
+[[ -f "$guide_json" ]] || log "no guide.json: findings are not matched against Architect's attention"
+attention_of() {  # attention_of <finding-json>
+  [[ -f "$guide_json" ]] || return 0
+  jq -r --argjson f "$1" --argjson near "${PR_REVIEW_FIX_NEAR:-5}" '
+    [(.attention // []) | to_entries[] | .key as $i | .value
+     | select(((.findings // []) | index($f.id)) != null
+              or ($near > 0 and .path == $f.path and ((.line - $f.line) | fabs) <= $near))
+     | "\($i + 1). \(.title)"] | first // empty' "$guide_json"
+}
 rollback_to() { git -C "$wt" reset -q --hard "$1"; git -C "$wt" clean -qfd; }
 
 # Most severe first: later fixes build on earlier ones.
@@ -119,6 +131,10 @@ for finding in "${order[@]}"; do
   fid="$(jq -r .id <<<"$finding")"
   id="R$round-$fid"
   start=$SECONDS before="$(git -C "$wt" rev-parse HEAD)"
+  tied="$(attention_of "$finding")"
+  if [[ -n "$tied" ]]; then
+    add_item "$id" owner "" "needs owner: part of Architect's attention item $tied" '[]' 0 0; continue
+  fi
   out="$round_dir/logs/fixer-$fid.json"
   rc=0
   (cd "$wt" && timeout "$TIMEOUT" claude \

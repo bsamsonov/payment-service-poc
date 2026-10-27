@@ -30,19 +30,23 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    diff must succeed, counting only reviewers that are on; otherwise exit code 3.
 3. `aggregate.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
    `report.md` (with the lanes and why they were switched on), `stats.tsv`.
-4. `fix.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
-   medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. The fix is kept only if
-   `lanes.py --protected` passes (no guards, spec, ADRs, API contract, migrations from the base branch, no
-   suppressions; existing tests only get lines added, no assumptions or conditional execution), the commit hooks
-   accept it and the fast check is green; per finding one commit `fix(<scope>): … (R<n>-F<k>)` with the code and,
-   if tests changed, one `test(<scope>): cover the auto-fix of R<n>-F<k>`; then a fast-forward push → `fixes.json`
-   (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`). Runs only with publication; skipped when the PR head moved or the PR comes from a fork; off with
-   `--no-fix` or `fixer off`.
-5. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
-   `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, then
-   places to read line by line, out-of-scope changes, findings, what to skim), plus two Russian documents for the
-   owner that are not posted: `guide.ru.md` (reading version) and `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
-   not stop publication of the findings.
+4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
+   `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, each
+   with the ids of findings that belong to it, then places to read line by line, out-of-scope changes, findings,
+   what to skim), plus two Russian documents for the owner that are not posted: `guide.ru.md` (reading version) and
+   `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
+   not stop the auto-fix or publication of the findings. Runs before the auto-fix, so that the fixer leaves the
+   findings of an attention item to the owner.
+5. `fix.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
+   medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. A finding listed by an
+   attention item of `guide.json`, or on its file within 5 lines (`PR_REVIEW_FIX_NEAR`), goes to the owner without
+   a fixer run. The fix is kept only if `lanes.py --protected` passes (no guards, spec, ADRs, API contract,
+   migrations from the base branch, no suppressions; existing tests only get lines added, no assumptions or
+   conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
+   `fix(<scope>): … (R<n>-F<k>)` with the code and, if tests changed, one `test(<scope>): cover the auto-fix of
+   R<n>-F<k>`; then a fast-forward push → `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).
+   Runs only with publication; skipped when the PR head moved or the PR comes from a fork; off with `--no-fix` or
+   `fixer off`.
 6. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide; each comment
    says "Auto-fixed in `<sha>`" (and the test commit) or why it was not fixed. Threads stay open: the owner checks and resolves them.
 7. If fixes were pushed: one more round `pr-review.sh <pr> --delta --no-fix` over the fix commits (confirms the

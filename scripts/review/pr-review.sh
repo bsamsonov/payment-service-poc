@@ -45,14 +45,16 @@ warn_if_tooling_differs_from_main
 round_dir="$("$SCRIPTS_DIR/bundle.sh" "$pr" "${delta[@]}")"
 "$SCRIPTS_DIR/run-reviewers.sh" "$round_dir" "${degraded[@]}"
 "$SCRIPTS_DIR/aggregate.sh" "$round_dir"
+# The guide comes before the auto-fix: a finding tied to one of its Architect's attention items is part of that
+# decision and is left to the owner. A failed guide does not hold back the findings: they are fixed and published
+# anyway (without that match), the guide can be re-run alone. The fix commits are covered by the delta round below.
+if [[ "$guide" == true ]]; then
+  "$SCRIPTS_DIR/guide.sh" "$round_dir" >/dev/null || log "WARNING: review guide failed; findings are published without it"
+fi
 # Fixes are pushed to the PR, so they run only together with publication. A failed auto-fix does not stop the round:
 # its findings are published as not fixed.
 if [[ "$fix" == true && "$publish" == true ]]; then
   "$SCRIPTS_DIR/fix.sh" "$round_dir" || log "WARNING: auto-fix failed; findings are published without fixes"
-fi
-# A failed guide does not hold back the findings: they are published anyway, the guide can be re-run alone.
-if [[ "$guide" == true ]]; then
-  "$SCRIPTS_DIR/guide.sh" "$round_dir" >/dev/null || log "WARNING: review guide failed; findings are published without it"
 fi
 if [[ "$publish" == true ]]; then
   "$SCRIPTS_DIR/publish.sh" "$round_dir"
