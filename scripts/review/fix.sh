@@ -131,7 +131,8 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
     --disable-slash-commands \
     --no-session-persistence \
     --settings "$CLAUDE_REVIEW_SETTINGS") >"$out" 2>"$round_dir/logs/fixer-$fid.err" || rc=$?
-  cost="$(jq -r '.total_cost_usd // 0' "$out" 2>/dev/null || echo 0)"
+  cost="$(jq -r '.total_cost_usd // 0' "$out" 2>/dev/null || true)"
+  [[ "$cost" =~ ^[0-9.eE+-]+$ ]] || cost=0  # a crashed run leaves no or broken output
   total_cost="$(jq -n --arg a "$total_cost" --arg b "$cost" '(($a | tonumber) + ($b | tonumber)) * 10000 | round / 10000')"
   cost="$(jq -n --arg c "$cost" '$c | tonumber * 10000 | round / 10000')"
   answer="$(jq -c 'if (.structured_output | type) == "object" then .structured_output
