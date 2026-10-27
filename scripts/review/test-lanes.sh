@@ -161,6 +161,21 @@ check_facts "base moved: noted" behind db 'is 1 commit(s) ahead of the merge-bas
 check_facts "base moved: rule file listed" behind db '- `AGENTS.md`'
 check "base not moved: no section" "no" "$(grep -q 'Base branch moved' "$work/rounds/new-migration/bundle/lanes/db/facts.md" && echo yes || echo no)"
 
+scenario two-modules
+put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
+public record Refund(long amount) {}'
+git add -A && git commit -qm refund
+mid="$(git rev-parse HEAD)"
+put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
+public record Refund(long amount, String reason) {}'
+put "$J/domain/Money.java" 'package x.app.domain;
+public record Money(long amount, String currency) {}'
+git commit -qam both
+check "two modules: boundaries" "boundaries" "$(run_lanes two-modules "$mid" delta)"
+check_facts "two modules: listed" two-modules boundaries 'changes in 2 modules at once: `(single module)`, `refund`'
+check "one module: no lanes" "" "$(git checkout -q -B one-module "$mid" && put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
+public record Refund(long amount, long fee) {}' && git commit -qam one && run_lanes one-module "$mid" delta)"
+
 echo
 if (( failures )); then echo "$failures test(s) failed"; exit 1; fi
 echo "all lanes tests passed"

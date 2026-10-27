@@ -222,6 +222,19 @@ def module_of(comp: str) -> str:
     return "(single module)" if first in LAYER_WORDS or comp == "(root)" else first
 
 
+def touched_modules(files: list[tuple[str, str, str | None]], root: str) -> list[str]:
+    """Modules whose main Java code the change touches (also deleted or renamed-away files). The root package
+    itself (the application class) is not a module; layers directly under the root count as one module."""
+    mods = set()
+    for _, path, old in files:
+        for p in (path, old):
+            if p and p.startswith(MAIN_JAVA) and p.endswith(".java"):
+                comp = component(str(Path(p[len(MAIN_JAVA):]).parent).replace("/", "."), root)
+                if comp and comp != "(root)":
+                    mods.add(module_of(comp))
+    return sorted(mods)
+
+
 def edges(sources: dict[str, tuple[str, list[tuple[int, str]]]], root: str) -> dict[tuple[str, str], tuple[str, int]]:
     """(from component, to component) -> first example (path, line)."""
     result: dict[tuple[str, str], tuple[str, int]] = {}
@@ -331,6 +344,7 @@ class Round:
                 "ports": [(s, p) for s, p, _ in self.files if p.startswith(MAIN_JAVA) and p.endswith(".java")
                           and ("/port/" in p or p.endswith("Port.java"))],
                 "events": self.marker_hits(EVENT_MARKERS, re.compile("^" + re.escape(MAIN_JAVA))),
+                "modules_touched": touched_modules(self.files, root),
             }
         return self._boundaries
 
@@ -351,6 +365,9 @@ class Round:
         reasons += [f"new dependency `{a}` → `{c}` (`{p}:{n}`)" for (a, c), (p, n) in sorted(b["new_edges"].items())]
         reasons += [f"port `{p}` {status_word(s)}" for s, p in b["ports"]]
         reasons += [f"event or module marker at `{p}:{n}`" for p, n, _ in b["events"]]
+        if len(b["modules_touched"]) > 1:
+            reasons.append(f"changes in {len(b['modules_touched'])} modules at once: "
+                           + ", ".join(f"`{m}`" for m in b["modules_touched"]))
         return reasons
 
     def trigger_guards(self) -> list[str]:
@@ -464,6 +481,10 @@ class Round:
         out += [f"- `{c}`{' **(new)**' if c in b['new_components'] else ''} — module `{module_of(c)}`"
                 for c in b["components"]] or ["- none"]
         out += [f"- removed: `{c}`" for c in b["removed_components"]]
+        out += ["", "## Modules touched by the change", ""]
+        out += [f"- `{m}`" for m in b["modules_touched"]] or ["- none (no main Java code of a module)"]
+        if len(b["modules_touched"]) > 1:
+            out.append("- **more than one module changes in this range**: each module's change needs its own reason")
         out += ["", "## New dependencies between components", ""]
         if b["new_edges"]:
             out += ["| From | To | Cross-module | Example |", "|---|---|---|---|"]
