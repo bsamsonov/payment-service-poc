@@ -26,7 +26,7 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
 - [x] T4 (AC-10) Domain: `PaymentId`/event ids (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` transition table,
   `FailureCode`, `ProviderOutcome`, `Payment.apply` → `Applied | NoOp | Rejected` (incl. `conflicting_duplicate`).
   Tests first: `PaymentStatusTest` (full table), `PaymentTest`, `CurrencyPolicyTest` (unit part of AC-6).
-- [ ] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.
+- [x] T5 (AC-17) `RequestHasher`: canonical JSON (sorted keys, no insignificant whitespace) → SHA-256.
   Test first: `RequestHasherTest` (key order, whitespace, nested `metadata`, different values → different hash).
 - [ ] T6 (AC-10, AC-11, AC-14) Ports and JPA adapters (`PaymentRepository`, `PaymentJournal`), `TraceContext` port +
   `MicrometerTraceContext`, `PaymentStatusApplier` with `sequence_no = max + 1` (`max` read in one query with the
