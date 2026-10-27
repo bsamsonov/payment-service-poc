@@ -176,6 +176,62 @@ check_facts "two modules: listed" two-modules boundaries 'changes in 2 modules a
 check "one module: no lanes" "" "$(git checkout -q -B one-module "$mid" && put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
 public record Refund(long amount, long fee) {}' && git commit -qam one && run_lanes one-module "$mid" delta)"
 
+# lanes.py --protected: what an automatic fix may not change (exit 1 + reasons) and what it may (exit 0).
+protected() {  # protected <name> <expected substring or "-" for allowed>; the fix is the last commit
+  local out rc=0
+  out="$(python3 "$LANES_PY" --protected HEAD~1 HEAD "$base" 2>&1)" || rc=$?
+  if [[ "$2" == - ]]; then
+    [[ $rc == 0 ]] && echo "ok   $1" || { echo "FAIL $1: expected allowed, got: $out"; failures=$((failures + 1)); }
+  elif [[ $rc == 1 && "$out" == *"$2"* ]]; then echo "ok   $1"
+  else echo "FAIL $1: expected '$2', got (exit $rc): $out"; failures=$((failures + 1)); fi
+}
+fix_commit() { git add -A && git commit -qm fix; }
+scenario protect
+put "$J/application/port/Repo.java" 'package x.app.application.port;
+public interface Repo {}'
+put "$J/adapter/out/db/JdbcRepo.java" 'package x.app.adapter.out.db;
+import x.app.application.port.Repo;
+public class JdbcRepo implements Repo { int a; }'
+put "$J/config/Wiring.java" 'package x.app.config;
+import x.app.application.port.Repo;
+class Wiring { Repo repo; }'
+put "$J/config/ClockConfig.java" 'package x.app.config;
+class ClockConfig { int zone; }'
+put src/main/resources/db/migration/V2__refunds.sql 'CREATE TABLE refunds (id uuid);'
+git add -A && git commit -qm "pr code"
+put "$J/application/Pay.java" 'package x.app.application;
+import x.app.domain.Money;
+public class Pay { Money m; int fixed; }'
+fix_commit; protected "plain fix in one module: allowed" -
+put "$J/adapter/out/db/JdbcRepo.java" 'package x.app.adapter.out.db;
+import x.app.application.port.Repo;
+public class JdbcRepo implements Repo { int b; }'
+fix_commit; protected "adapter body: allowed" -
+put "$J/config/ClockConfig.java" 'package x.app.config;
+class ClockConfig { int utc; }'
+fix_commit; protected "config without ports: allowed" -
+put src/main/resources/db/migration/V2__refunds.sql 'CREATE TABLE refunds (id uuid PRIMARY KEY);'
+fix_commit; protected "migration added by the PR" "is a migration (database schema)"
+put "$J/application/port/Repo.java" 'package x.app.application.port;
+public interface Repo { void save(); }'
+fix_commit; protected "port" "is a port"
+put "$J/application/package-info.java" 'package x.app.application;'
+fix_commit; protected "package-info" "declares a package or module boundary"
+put "$J/adapter/out/db/MemRepo.java" 'package x.app.adapter.out.db;
+import x.app.application.port.Repo;
+public class MemRepo implements Repo {}'
+fix_commit; protected "new port implementation" "adds or changes an implementation of a port"
+put "$J/config/Wiring.java" 'package x.app.config;
+import x.app.application.port.Repo;
+class Wiring { Repo other; }'
+fix_commit; protected "wiring of ports" "wires ports"
+put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
+public record Refund(long amount) {}'
+put "$J/application/Pay.java" 'package x.app.application;
+import x.app.domain.Money;
+public class Pay { Money m; int fixedTwice; }'
+fix_commit; protected "two modules" "changes main code in 2 modules at once"
+
 echo
 if (( failures )); then echo "$failures test(s) failed"; exit 1; fi
 echo "all lanes tests passed"

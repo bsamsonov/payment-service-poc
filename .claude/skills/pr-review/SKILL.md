@@ -41,7 +41,8 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. A finding listed by an
    attention item of `guide.json`, or on its file within 5 lines (`PR_REVIEW_FIX_NEAR`), goes to the owner without
    a fixer run. The fix is kept only if `lanes.py --protected` passes (no guards, spec, ADRs, API contract,
-   migrations from the base branch, no suppressions; existing tests only get lines added, no assumptions or
+   migrations, ports, `package-info`, port implementations or their wiring in `config`, main code of more than one
+   module, no suppressions; existing tests only get lines added, no assumptions or
    conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
    `fix(<scope>): … (R<n>-F<k>)` with the code and, if tests changed, one `test(<scope>): cover the auto-fix of
    R<n>-F<k>`; then a fast-forward push → `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).

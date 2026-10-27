@@ -100,7 +100,8 @@ Integration tests (`*IT`) need Docker (Testcontainers).
   `fix(<scope>): … (R<n>-F<k>)` commit per finding (its test changes in a separate `test(<scope>): …` commit)
   pushed to the PR branch, then one delta round over the fixes. Existing tests may only grow in an auto-fix.
   What the fixer did not fix (it declined; the finding belongs to an Architect's attention item; the fix touched
-  the spec, contract, guards or an existing migration, changed or switched off an existing test; or the fast check
+  the spec, contract, guards, a migration, a port, its implementation or wiring, `package-info` or more than one
+  module, changed or switched off an existing test; or the fast check
   failed) is closed by hand with a fix commit or a reply explaining why it is not a bug; the next
   round reviews only new commits (`--delta`). The owner resolves every thread, including auto-fixed ones.
 - When a PR touches migrations, the API contract, module or layer boundaries, or the checks themselves (rules,

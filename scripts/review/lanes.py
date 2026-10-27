@@ -235,6 +235,21 @@ def touched_modules(files: list[tuple[str, str, str | None]], root: str) -> list
     return sorted(mods)
 
 
+PORT_PATH = re.compile(r"(/port/|Port\.java$)")
+PORT_IMPORT = re.compile(r"^\s*import\s+[\w.]*\.port\.\w+")
+IMPLEMENTS = re.compile(r"\b(?:class|record|enum)\s+(\w+)[^{;]*?\bimplements\s+([^{]+)\{")
+
+
+def implemented(text: str) -> set[str]:
+    """`Type:Interface` pairs declared in a Java source (generics stripped)."""
+    out = set()
+    for m in IMPLEMENTS.finditer(text):
+        for t in re.sub(r"<[^<>]*>", "", m.group(2)).split(","):
+            if t.strip():
+                out.add(f"{m.group(1)}:{t.strip().split('.')[-1]}")
+    return out
+
+
 def edges(sources: dict[str, tuple[str, list[tuple[int, str]]]], root: str) -> dict[tuple[str, str], tuple[str, int]]:
     """(from component, to component) -> first example (path, line)."""
     result: dict[tuple[str, str], tuple[str, int]] = {}
@@ -557,7 +572,10 @@ def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
 
     Tests may only grow: new test files are free, an existing test file may only get lines added. A removed or
     changed line there (other than a line moved within the file, e.g. a reordered import), a renamed or deleted test
-    file, or an added assumption or conditional execution goes to the owner, since it may narrow what is checked."""
+    file, or an added assumption or conditional execution goes to the owner, since it may narrow what is checked.
+
+    Contracts and structure are the owner's too: any migration (also one added by this PR), ports, `package-info`,
+    a new port implementation, wiring that refers to ports, and a change of main code in more than one module."""
     reasons = []
     files = changed_files(base, head)
     existing_tests = set()
@@ -571,11 +589,31 @@ def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
             reasons.append(f"`{path}` is a guard (rules, analyzers, CI, agent rules)")
         elif SPEC_PATHS.search(path):
             reasons.append(f"`{path}` is the spec, an ADR or the API contract")
-        elif path.startswith(MIGRATIONS) and exists_at(main_ref, old or path):
-            reasons.append(f"`{path}` is a migration that already exists on `{main_ref}`")
+        elif path.startswith(MIGRATIONS):
+            reasons.append(f"`{path}` is a migration that already exists on `{main_ref}`"
+                           if exists_at(main_ref, old or path) else f"`{path}` is a migration (database schema)")
+        elif path.startswith(MAIN_JAVA) and PORT_PATH.search(path):
+            reasons.append(f"`{path}` is a port")
+        elif path.startswith(MAIN_JAVA) and path.endswith("package-info.java"):
+            reasons.append(f"`{path}` declares a package or module boundary")
         if status == "D" and path.startswith("src/test/"):
             reasons.append(f"`{path}` (test) deleted")
     added, removed = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
+    root = root_package(head, java_sources(head), java_sources(base))
+    mods = touched_modules(files, root)
+    if len(mods) > 1:
+        reasons.append(f"changes main code in {len(mods)} modules at once: " + ", ".join(f"`{m}`" for m in mods))
+    for status, path, old in files:
+        if status == "D" or not path.startswith(MAIN_JAVA) or not path.endswith(".java") or PORT_PATH.search(path):
+            continue
+        text = git("show", f"{head}:{path}", check=False)
+        if not any(PORT_IMPORT.search(line) for line in text.splitlines()):
+            continue
+        before = git("show", f"{base}:{old or path}", check=False) if status != "A" else ""
+        if implemented(text) != implemented(before):
+            reasons.append(f"`{path}` adds or changes an implementation of a port")
+        elif "/config/" in path:
+            reasons.append(f"`{path}` wires ports (which implementation is used)")
     for path, lines in sorted(added.items()):
         if GUARD_MARKER_PATHS.search(path):
             reasons += [f"suppression added at `{path}:{n}`: `{t.strip()}`" for n, t in lines if SUPPRESSION_MARKERS.search(t)]
