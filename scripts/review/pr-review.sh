@@ -56,8 +56,17 @@ fi
 if [[ "$fix" == true && "$publish" == true ]]; then
   "$SCRIPTS_DIR/fix.sh" "$round_dir" || log "WARNING: auto-fix failed; findings are published without fixes"
 fi
-if [[ "$publish" == true ]]; then
-  "$SCRIPTS_DIR/publish.sh" "$round_dir"
+# Publication comes after the push: if it fails, the fix commits are in the PR without the comments that explain
+# them. Both steps of the recovery are safe to repeat (publish.sh posts only what is missing; fix.sh does not fix
+# again), so say what to run instead of leaving a half-done round.
+if [[ "$publish" == true ]] && ! "$SCRIPTS_DIR/publish.sh" "$round_dir"; then
+  if [[ -f "$round_dir/fixes.json" ]] && jq -e '.pushed == true' "$round_dir/fixes.json" >/dev/null; then
+    log "ERROR: publication failed after the auto-fix pushed $(jq -r '"\(.head_before[:7])..\(.head_after[:7])"' \
+      "$round_dir/fixes.json") to the PR. Recover with:"
+    log "  scripts/review/publish.sh ${round_dir#"$REPO_ROOT"/}"
+    log "  scripts/review/pr-review.sh $pr --delta --no-fix"
+  fi
+  exit 1
 fi
 
 rel="${round_dir#"$REPO_ROOT"/}"
