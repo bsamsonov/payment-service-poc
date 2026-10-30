@@ -28,10 +28,10 @@ case "$id" in
   *-F4) touch BROKEN; answer fixed "breaks the build" ;;
   *-F5) answer declined "stale: already fixed at this commit" ;;
   *-F6) printf '@Disabled\nclass ATest {}\n' >src/ATest.java; answer fixed "flaky test" ;;
-  *-F7) echo "class C { int fixed; }" >src/C.java; echo "  @Test void more() {}" >>src/test/ExistingTest.java
-        echo "class CTest {}" >src/test/CTest.java; answer fixed "code plus tests that only grow" ;;
-  *-F8) sed -i 's/assertEquals(1, a)/assertEquals(2, a)/' src/test/ExistingTest.java; answer fixed "changed assertion" ;;
-  *-F11) echo "  @Test void skipped() { assumeTrue(false); }" >>src/test/ExistingTest.java; answer fixed "assumption" ;;
+  *-F7) echo "class C { int fixed; }" >src/C.java
+        echo "class CTest {}" >src/test/CTest.java; answer fixed "code plus a new test file" ;;
+  *-F8) echo "  @Test void more() {}" >>src/test/ExistingTest.java; answer fixed "a line added to an existing test" ;;
+  *-F11) echo "class DTest { @Test void skipped() { assumeTrue(false); } }" >src/test/DTest.java; answer fixed "assumption" ;;
   *)    exit 1 ;;
 esac
 STUB
@@ -94,11 +94,11 @@ subject="$(git log -1 --format=%s origin/feat/x~2)"
 [[ "$(git log -1 --format=%s origin/feat/x)" == "test(payment): cover the auto-fix of R1-F7" ]] \
   || fail "test commit subject: $(git log -1 --format=%s origin/feat/x)"
 git diff --name-only origin/feat/x~2 origin/feat/x~1 | grep -q '^src/test/' && fail "F7 code commit touches tests"
-[[ "$(git diff --name-only origin/feat/x~1 origin/feat/x | sort | paste -sd' ')" == "src/test/CTest.java src/test/ExistingTest.java" ]] \
+[[ "$(git diff --name-only origin/feat/x~1 origin/feat/x | paste -sd' ')" == "src/test/CTest.java" ]] \
   || fail "F7 test commit files: $(git diff --name-only origin/feat/x~1 origin/feat/x | paste -sd' ')"
 jq -e '.items[] | select(.id == "R1-F7") | (.sha | length) == 40 and (.test_sha | length) == 40 and .sha != .test_sha' \
   "$round/fixes.json" >/dev/null || fail "F7 shas in fixes.json"
-for pair in R1-F8:"existing test changed" R1-F9:"attention item 1. who owns" R1-F10:"attention item 2. near" \
+for pair in R1-F8:"existing test .* changed" R1-F9:"attention item 1. who owns" R1-F10:"attention item 2. near" \
             R1-F11:"switched off at run time"; do
   jq -r --arg id "${pair%%:*}" '.items[] | select(.id == $id) | .reason' "$round/fixes.json" | grep -q "${pair#*:}" \
     || fail "reason of ${pair%%:*}: $(jq -r --arg id "${pair%%:*}" '.items[] | select(.id == $id) | .reason' "$round/fixes.json")"

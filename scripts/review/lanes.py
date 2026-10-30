@@ -554,8 +554,7 @@ def status_word(s: str) -> str:
 
 SPEC_PATHS = re.compile(r"^(specs/|openspec/|docs/adr/|api/)")
 MIGRATIONS = "src/main/resources/db/"
-TEST_REMOVED = re.compile(r"^\s*@(Test|ParameterizedTest|RepeatedTest|TestFactory|ArchTest)\b")
-# Added to a test, these switch it off at run time without @Disabled: assumptions and conditional execution.
+# Added to a new test, these switch it off at run time without @Disabled: assumptions and conditional execution.
 TEST_SKIP_MARKERS = re.compile(
     r"\bassume(True|False|That)?\s*\(|\bAssumptions\.|\bassumingThat\s*\(|@(Enabled|Disabled)(If|On|For|In)\w*"
 )
@@ -568,23 +567,25 @@ def exists_at(rev: str, path: str) -> bool:
 def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
     """Why a change base..head must go to the owner instead of an automatic fix: it touches what the fixer may not
     change — guards (rules, analyzers, CI, hooks, agent rules, review docs), the spec, ADRs or the API contract,
-    a migration that already exists on the base branch — or it weakens checks (suppressions, removed tests).
+    a migration that already exists on the base branch — or it weakens checks (suppressions, skipped tests).
 
-    Tests may only grow: new test files are free, an existing test file may only get lines added. A removed or
-    changed line there (other than a line moved within the file, e.g. a reordered import), a renamed or deleted test
-    file, or an added assumption or conditional execution goes to the owner, since it may narrow what is checked.
+    Tests may only grow by new files: a new test file is free (unless it switches itself off with an assumption or
+    conditional execution). Any change of an existing test file — also a line only added to it, a rename or a
+    deletion — goes to the owner: it needs a reason and the owner's confirmation, since even an added line
+    (e.g. `return;` at the top of a test) may narrow what is checked.
 
     Contracts and structure are the owner's too: any migration (also one added by this PR), ports, `package-info`,
     a new port implementation, wiring that refers to ports, and a change of main code in more than one module."""
     reasons = []
     files = changed_files(base, head)
-    existing_tests = set()
     for status, path, old in files:
-        if path.startswith("src/test/"):
+        if path.startswith("src/test/") and status != "A":
             if status in "RC":
                 reasons.append(f"`{old}` (test) renamed to `{path}`")
-            elif status == "M":
-                existing_tests.add(path)
+            elif status == "D":
+                reasons.append(f"`{path}` (test) deleted")
+            else:
+                reasons.append(f"existing test `{path}` changed: needs a reason and the owner's confirmation")
         if GUARD_PATHS.search(path) or RULE_FILES.search(path):
             reasons.append(f"`{path}` is a guard (rules, analyzers, CI, agent rules)")
         elif SPEC_PATHS.search(path):
@@ -596,9 +597,7 @@ def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
             reasons.append(f"`{path}` is a port")
         elif path.startswith(MAIN_JAVA) and path.endswith("package-info.java"):
             reasons.append(f"`{path}` declares a package or module boundary")
-        if status == "D" and path.startswith("src/test/"):
-            reasons.append(f"`{path}` (test) deleted")
-    added, removed = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
+    added, _ = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
     root = root_package(head, java_sources(head), java_sources(base))
     mods = touched_modules(files, root)
     if len(mods) > 1:
@@ -620,18 +619,6 @@ def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
         if path.startswith("src/test/"):
             reasons += [f"test switched off at run time at `{path}:{n}`: `{t.strip()}`"
                         for n, t in lines if TEST_SKIP_MARKERS.search(t)]
-    for path, lines in sorted(removed.items()):
-        if not path.startswith("src/test/"):
-            continue
-        kept = {t.strip() for _, t in added.get(path, [])}
-        gone = [t.strip() for t in lines if TEST_REMOVED.search(t) and t.strip() not in kept]
-        if len(gone) > sum(1 for _, t in added.get(path, []) if TEST_REMOVED.search(t)):
-            reasons += [f"test removed in `{path}`: `{t}`" for t in gone]
-        if path in existing_tests:
-            changed = [t.strip() for t in lines if t.strip() and t.strip() not in kept]
-            if changed:
-                more = f" (+{len(changed) - 1} more)" if len(changed) > 1 else ""
-                reasons.append(f"existing test changed in `{path}`: `{changed[0]}`{more}")
     return reasons
 
 

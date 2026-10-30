@@ -231,6 +231,12 @@ put "$J/application/Pay.java" 'package x.app.application;
 import x.app.domain.Money;
 public class Pay { Money m; int fixedTwice; }'
 fix_commit; protected "two modules" "changes main code in 2 modules at once"
+put src/test/java/x/app/PayTest.java 'class PayTest { @Test void pays() {} }'
+fix_commit; protected "new test file: allowed" -
+printf '  @Test void more() {}\n' >>src/test/java/x/app/PayTest.java
+fix_commit; protected "line added to an existing test" "existing test \`src/test/java/x/app/PayTest.java\` changed"
+put src/test/java/x/app/SkipTest.java 'class SkipTest { @Test void s() { assumeTrue(false); } }'
+fix_commit; protected "new test that switches itself off" "test switched off at run time"
 
 echo
 if (( failures )); then echo "$failures test(s) failed"; exit 1; fi
