@@ -11,8 +11,6 @@ without a model and copies the lane checklist; the `review-lane` agent judges th
   <round>/bundle/adr/                        — ADRs at the PR head, when any lane is on
 
 Usage: scripts/review/specialist_lanes.py <round-dir>
-       scripts/review/specialist_lanes.py --protected <base> <head> <main-ref>
-         reasons why the change base..head may not be an automatic fix (one per line; exit 1 if any) — autofix-findings.sh
 Env:   PR_REVIEW_LANES       auto (default) | none | comma-separated lanes to force (e.g. db,api)
        PR_REVIEW_LANE_TOOLS  1 (default) | 0 — run external tools (squawk, oasdiff, redocly); 0 in tests/offline
 """
@@ -233,21 +231,6 @@ def touched_modules(files: list[tuple[str, str, str | None]], root: str) -> list
                 if comp and comp != "(root)":
                     mods.add(module_of(comp))
     return sorted(mods)
-
-
-PORT_PATH = re.compile(r"(/port/|Port\.java$)")
-PORT_IMPORT = re.compile(r"^\s*import\s+[\w.]*\.port\.\w+")
-IMPLEMENTS = re.compile(r"\b(?:class|record|enum)\s+(\w+)[^{;]*?\bimplements\s+([^{]+)\{")
-
-
-def implemented(text: str) -> set[str]:
-    """`Type:Interface` pairs declared in a Java source (generics stripped)."""
-    out = set()
-    for m in IMPLEMENTS.finditer(text):
-        for t in re.sub(r"<[^<>]*>", "", m.group(2)).split(","):
-            if t.strip():
-                out.add(f"{m.group(1)}:{t.strip().split('.')[-1]}")
-    return out
 
 
 def edges(sources: dict[str, tuple[str, list[tuple[int, str]]]], root: str) -> dict[tuple[str, str], tuple[str, int]]:
@@ -552,86 +535,9 @@ def status_word(s: str) -> str:
     return {"A": "added", "M": "modified", "D": "deleted", "R": "renamed", "C": "copied", "T": "type changed"}.get(s, s)
 
 
-SPEC_PATHS = re.compile(r"^(specs/|openspec/|docs/adr/|api/)")
-MIGRATIONS = "src/main/resources/db/"
-# Added to a new test, these switch it off at run time without @Disabled: assumptions and conditional execution.
-TEST_SKIP_MARKERS = re.compile(
-    r"\bassume(True|False|That)?\s*\(|\bAssumptions\.|\bassumingThat\s*\(|@(Enabled|Disabled)(If|On|For|In)\w*"
-)
-
-
-def exists_at(rev: str, path: str) -> bool:
-    return subprocess.run(["git", "cat-file", "-e", f"{rev}:{path}"], capture_output=True).returncode == 0
-
-
-def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
-    """Why a change base..head must go to the owner instead of an automatic fix: it touches what the fixer may not
-    change — guards (rules, analyzers, CI, hooks, agent rules, review docs), the spec, ADRs or the API contract,
-    a migration that already exists on the base branch — or it weakens checks (suppressions, skipped tests).
-
-    Tests may only grow by new files: a new test file is free (unless it switches itself off with an assumption or
-    conditional execution). Any change of an existing test file — also a line only added to it, a rename or a
-    deletion — goes to the owner: it needs a reason and the owner's confirmation, since even an added line
-    (e.g. `return;` at the top of a test) may narrow what is checked.
-
-    Contracts and structure are the owner's too: any migration (also one added by this PR), ports, `package-info`,
-    a new port implementation, wiring that refers to ports, and a change of main code in more than one module."""
-    reasons = []
-    files = changed_files(base, head)
-    for status, path, old in files:
-        if (old or path).startswith("src/test/") and status != "A":
-            if status in "RC":
-                reasons.append(f"`{old}` (test) renamed to `{path}`")
-            elif status == "D":
-                reasons.append(f"`{path}` (test) deleted")
-            else:
-                reasons.append(f"existing test `{path}` changed: needs a reason and the owner's confirmation")
-        # A rename is checked at both ends: moving a file out of a protected place changes that place too.
-        for p in dict.fromkeys(x for x in (path, old) if x):
-            where = f"`{p}`" + (f" (moved to `{path}`)" if p == old and status == "R" else "")
-            if GUARD_PATHS.search(p) or RULE_FILES.search(p):
-                reasons.append(f"{where} is a guard (rules, analyzers, CI, agent rules)")
-            elif SPEC_PATHS.search(p):
-                reasons.append(f"{where} is the spec, an ADR or the API contract")
-            elif p.startswith(MIGRATIONS):
-                reasons.append(f"{where} is a migration that already exists on `{main_ref}`"
-                               if exists_at(main_ref, p) else f"{where} is a migration (database schema)")
-            elif p.startswith(MAIN_JAVA) and PORT_PATH.search(p):
-                reasons.append(f"{where} is a port")
-            elif p.startswith(MAIN_JAVA) and p.endswith("package-info.java"):
-                reasons.append(f"{where} declares a package or module boundary")
-    added, _ = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
-    root = root_package(head, java_sources(head), java_sources(base))
-    mods = touched_modules(files, root)
-    if len(mods) > 1:
-        reasons.append(f"changes main code in {len(mods)} modules at once: " + ", ".join(f"`{m}`" for m in mods))
-    for status, path, old in files:
-        if status == "D" or not path.startswith(MAIN_JAVA) or not path.endswith(".java") or PORT_PATH.search(path):
-            continue
-        text = git("show", f"{head}:{path}", check=False)
-        if not any(PORT_IMPORT.search(line) for line in text.splitlines()):
-            continue
-        before = git("show", f"{base}:{old or path}", check=False) if status != "A" else ""
-        if implemented(text) != implemented(before):
-            reasons.append(f"`{path}` adds or changes an implementation of a port")
-        elif "/config/" in path:
-            reasons.append(f"`{path}` wires ports (which implementation is used)")
-    for path, lines in sorted(added.items()):
-        if GUARD_MARKER_PATHS.search(path):
-            reasons += [f"suppression added at `{path}:{n}`: `{t.strip()}`" for n, t in lines if SUPPRESSION_MARKERS.search(t)]
-        if path.startswith("src/test/"):
-            reasons += [f"test switched off at run time at `{path}:{n}`: `{t.strip()}`"
-                        for n, t in lines if TEST_SKIP_MARKERS.search(t)]
-    return reasons
-
-
 def main() -> None:
-    if len(sys.argv) == 5 and sys.argv[1] == "--protected":
-        reasons = protected_reasons(*sys.argv[2:5])
-        print("\n".join(reasons))
-        sys.exit(1 if reasons else 0)
     if len(sys.argv) != 2:
-        sys.exit("usage: specialist_lanes.py <round-dir> | specialist_lanes.py --protected <base> <head> <main-ref>")
+        sys.exit("usage: specialist_lanes.py <round-dir>")
     round_dir = Path(sys.argv[1]).resolve()
     if not (round_dir / "meta.json").is_file():
         sys.exit(f"[pr-review] ERROR: not a round directory: {round_dir}")

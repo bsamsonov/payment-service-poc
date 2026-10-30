@@ -7,7 +7,7 @@
 #                 decisions = handed to the owner)
 #   report.md   — "Auto-fix" section
 #
-# A fix is kept only if the fixer reports it fixed, the change passes specialist_lanes.py --protected (no guards, spec, ADRs,
+# A fix is kept only if the fixer reports it fixed, the change passes autofix_guard.py (no guards, spec, ADRs,
 # API contract, migrations, ports, package-info, port implementations and their wiring, main code of more than one
 # module; no suppressions; tests only in new files), the commit hooks accept it and the fast check is green.
 # Otherwise it is rolled back and the finding stays with the owner.
@@ -205,7 +205,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
       fi
       git -C "$wt" commit -q -m "$test_subject" \
         -m "Test changes of the auto-fix of $about${fix_sha:+ (code: ${fix_sha:0:7})}. Kept apart from the code so that
-test changes are reviewed on their own; an auto-fix adds tests only in new files (specialist_lanes.py --protected)." \
+test changes are reviewed on their own; an auto-fix adds tests only in new files (autofix_guard.py)." \
         -m "Auto-fix: #$pr $id" \
         >>"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
       test_sha="$(git -C "$wt" rev-parse HEAD)"
@@ -216,7 +216,7 @@ test changes are reviewed on their own; an auto-fix adds tests only in new files
     rollback_to "$before"
     add_item "$id" not_fixed "" "commit hooks rejected the fix (see logs/fixer-$fid.commit.log)" "$files" "$secs" "$cost"; continue
   fi
-  if ! guard="$(cd "$wt" && python3 "$SCRIPTS_DIR/specialist_lanes.py" --protected "$before" HEAD "$main_ref")"; then
+  if ! guard="$(cd "$wt" && python3 "$SCRIPTS_DIR/autofix_guard.py" "$before" HEAD "$main_ref")"; then
     rollback_to "$before"
     add_item "$id" owner "" "the fix touches what needs the owner: $(paste -sd ';' <<<"$guard" | sed 's/;/; /g')" \
       "$files" "$(( SECONDS - start ))" "$cost"; continue

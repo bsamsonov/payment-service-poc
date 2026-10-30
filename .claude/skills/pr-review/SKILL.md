@@ -40,7 +40,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
 5. `autofix-findings.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
    medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. A finding listed by an
    attention item of `guide.json`, or on its file within 5 lines (`PR_REVIEW_FIX_NEAR`), goes to the owner without
-   a fixer run. The fix is kept only if `specialist_lanes.py --protected` passes (no guards, spec, ADRs, API contract,
+   a fixer run. The fix is kept only if `autofix_guard.py` passes (no guards, spec, ADRs, API contract,
    migrations, ports, `package-info`, port implementations or their wiring in `config`, main code of more than one
    module, no suppressions; tests only in new files, which do not switch themselves off by an assumption or
    conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
