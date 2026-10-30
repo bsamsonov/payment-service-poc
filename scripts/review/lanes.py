@@ -579,24 +579,27 @@ def protected_reasons(base: str, head: str, main_ref: str) -> list[str]:
     reasons = []
     files = changed_files(base, head)
     for status, path, old in files:
-        if path.startswith("src/test/") and status != "A":
+        if (old or path).startswith("src/test/") and status != "A":
             if status in "RC":
                 reasons.append(f"`{old}` (test) renamed to `{path}`")
             elif status == "D":
                 reasons.append(f"`{path}` (test) deleted")
             else:
                 reasons.append(f"existing test `{path}` changed: needs a reason and the owner's confirmation")
-        if GUARD_PATHS.search(path) or RULE_FILES.search(path):
-            reasons.append(f"`{path}` is a guard (rules, analyzers, CI, agent rules)")
-        elif SPEC_PATHS.search(path):
-            reasons.append(f"`{path}` is the spec, an ADR or the API contract")
-        elif path.startswith(MIGRATIONS):
-            reasons.append(f"`{path}` is a migration that already exists on `{main_ref}`"
-                           if exists_at(main_ref, old or path) else f"`{path}` is a migration (database schema)")
-        elif path.startswith(MAIN_JAVA) and PORT_PATH.search(path):
-            reasons.append(f"`{path}` is a port")
-        elif path.startswith(MAIN_JAVA) and path.endswith("package-info.java"):
-            reasons.append(f"`{path}` declares a package or module boundary")
+        # A rename is checked at both ends: moving a file out of a protected place changes that place too.
+        for p in dict.fromkeys(x for x in (path, old) if x):
+            where = f"`{p}`" + (f" (moved to `{path}`)" if p == old and status == "R" else "")
+            if GUARD_PATHS.search(p) or RULE_FILES.search(p):
+                reasons.append(f"{where} is a guard (rules, analyzers, CI, agent rules)")
+            elif SPEC_PATHS.search(p):
+                reasons.append(f"{where} is the spec, an ADR or the API contract")
+            elif p.startswith(MIGRATIONS):
+                reasons.append(f"{where} is a migration that already exists on `{main_ref}`"
+                               if exists_at(main_ref, p) else f"{where} is a migration (database schema)")
+            elif p.startswith(MAIN_JAVA) and PORT_PATH.search(p):
+                reasons.append(f"{where} is a port")
+            elif p.startswith(MAIN_JAVA) and p.endswith("package-info.java"):
+                reasons.append(f"{where} declares a package or module boundary")
     added, _ = parse_patch(git("diff", "--no-color", "--unified=0", base, head))
     root = root_package(head, java_sources(head), java_sources(base))
     mods = touched_modules(files, root)
