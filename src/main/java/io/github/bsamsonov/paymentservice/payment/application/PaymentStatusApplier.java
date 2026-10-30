@@ -123,7 +123,7 @@ public final class PaymentStatusApplier {
                         origin.source(),
                         rejected.reason().code());
             }
-            case NoOp noOp -> {
+            case NoOp _ -> {
                 // The same status with identical data: nothing to record
             }
         }
