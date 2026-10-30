@@ -237,13 +237,21 @@ put src/test/java/x/app/PayTest.java 'class PayTest { @Test void pays() {} }'
 fix_commit; protected "new test file: allowed" -
 printf '  @Test void more() {}\n' >>src/test/java/x/app/PayTest.java
 fix_commit; protected "line added to an existing test" "existing test \`src/test/java/x/app/PayTest.java\` changed"
+git mv api/payments.yaml docs/payments.yaml
+fix_commit; protected "contract moved out of api/" "\`api/payments.yaml\` (moved to \`docs/payments.yaml\`) is the spec"
+git mv docs/adr/0001-record.md docs/0001-record.md
+fix_commit; protected "ADR moved out of docs/adr/" "\`docs/adr/0001-record.md\` (moved to"
+git mv src/main/resources/db/migration/V1__init.sql src/main/resources/V1__init.sql
+fix_commit; protected "migration moved away" "is a migration that already exists"
 put src/main/resources/db/migration/V1__init.sql 'CREATE TABLE payments (id uuid PRIMARY KEY);'
 fix_commit; protected "migration already on main" "is a migration that already exists"
 put src/test/java/x/app/ArchitectureTest.java 'class ArchitectureTest { void domainIsPure() { return; } }'
 fix_commit; protected "architecture rule" "\`src/test/java/x/app/ArchitectureTest.java\` is a guard"
 git mv src/test/java/x/app/PayTest.java src/test/java/x/app/PaymentTest.java
 fix_commit; protected "test renamed" "(test) renamed to"
-put src/test/java/x/app/OldTest.java 'class OldTest { @Test void a() {} }'
+git mv src/test/java/x/app/PaymentTest.java PaymentTest.java
+fix_commit; protected "test moved out of src/test" "(test) renamed to"
+git rm -q PaymentTest.java && put src/test/java/x/app/OldTest.java 'class OldTest { @Test void a() {} }'
 git add -A && git commit -qm "pr test"
 git rm -q src/test/java/x/app/OldTest.java
 fix_commit; protected "test deleted" "(test) deleted"
