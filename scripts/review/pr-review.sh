@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# /pr-review pipeline: bundle (+ specialist lanes) → reviewers (parallel, quorum) → aggregation → auto-fix of the
-# confirmed findings → review guide → publication → one delta round over the fix commits.
+# /pr-review pipeline: bundle (+ specialist lanes) → reviewers (parallel, quorum) → aggregation → review guide →
+# auto-fix of the confirmed findings → publication → one delta round over the fix commits.
 #
 # Usage: scripts/review/pr-review.sh <pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish]
 #                                         [--lanes=<lane,…> | --no-lanes] [--skip=<id,…>] [--only=<id,…>]
