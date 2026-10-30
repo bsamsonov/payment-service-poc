@@ -51,3 +51,4 @@ Details: [ADR-0003](docs/adr/0003-development-workflow.md).
 
 ## License
 [MIT](LICENSE)
+
