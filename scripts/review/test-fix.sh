@@ -86,7 +86,10 @@ jq -e '.pushed' "$round/fixes.json" >/dev/null || fail "not pushed: $(jq -r .pus
 git fetch -q origin
 [[ "$(git rev-list --count "$head"..origin/feat/x)" == 3 ]] || fail "expected three commits on feat/x (F1; F7 code + tests)"
 subject="$(git log -1 --format=%s origin/feat/x~2)"
-[[ "$subject" == "fix(payment): guard the stale read with the event version (R1-F1)" ]] || fail "subject: $subject"
+# The subject is cut at a word to fit 72 characters; the trailer marks the commit as an auto-fix.
+[[ "$subject" == "fix(payment): guard the stale read with the event (auto-fix R1-F1)" ]] || fail "subject: $subject"
+[[ "$(git log -1 --format='%(trailers:key=Auto-fix,valueonly)' origin/feat/x~2)" == R1-F1* ]] || fail "no Auto-fix trailer on F1"
+[[ "$(git log -1 --format='%(trailers:key=Auto-fix,valueonly)' origin/feat/x)" == R1-F7* ]] || fail "no Auto-fix trailer on F7 tests"
 # F7: the code and the tests are separate commits, the code commit holds no test file.
 [[ "$(git log -1 --format=%s origin/feat/x)" == "test(payment): cover the auto-fix of R1-F7" ]] \
   || fail "test commit subject: $(git log -1 --format=%s origin/feat/x)"

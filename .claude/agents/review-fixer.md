@@ -45,7 +45,7 @@ Answer with one JSON object only (no prose before or after):
 {
   "status": "fixed | declined",
   "scope": "conventional-commit scope for the fix, e.g. payment, persistence, api, review",
-  "summary": "imperative, lowercase, at most 60 characters: what the fix does (becomes the commit subject)",
+  "summary": "imperative, lowercase, at most 40 characters: what the fix does (becomes the commit subject)",
   "reason": "declined: why (stale, not a defect, needs owner: …, verify stays red: …); fixed: one line on the cause",
   "files": ["paths you changed"]
 }
