@@ -7,7 +7,7 @@
 #                                         [--no-fix]
 #   --delta           review only the commits pushed since the previous round
 #   --allow-degraded  continue when the quorum is not met (recorded in the report)
-#   --no-guide        skip the review guide (guide.sh can be run later on the same round)
+#   --no-guide        skip the review guide (write-review-guide.sh can be run later on the same round)
 #   --no-publish      stop before publication (report.md / guide.md stay local); no auto-fix either
 #   --no-fix          do not fix the confirmed findings (also: `fixer off` in reviewers.conf / .review/reviewers.local)
 #   --lanes=db,api    run exactly these specialist lanes (L3) instead of the ones the diff switches on
@@ -16,7 +16,7 @@
 #   --only=checklist,bugs-opus  run just these reviewers (lanes as lane-<id>); others keep earlier results of the round
 # Reviewers on/off by default: scripts/review/reviewers.conf; personal override: .review/reviewers.local.
 # Env: PR_REVIEW_REVIEWERS, PR_REVIEW_SKIP, PR_REVIEW_TIMEOUT (see run-reviewers.sh), PR_REVIEW_LANES, PR_REVIEW_LANE_TOOLS
-#      (see lanes.py)
+#      (see specialist_lanes.py)
 #
 # Exit codes: 0 ok, 1 error, 3 quorum not met.
 set -euo pipefail
@@ -42,28 +42,28 @@ for arg in "$@"; do
 done
 
 warn_if_tooling_differs_from_main
-round_dir="$("$SCRIPTS_DIR/bundle.sh" "$pr" "${delta[@]}")"
+round_dir="$("$SCRIPTS_DIR/build-review-bundle.sh" "$pr" "${delta[@]}")"
 "$SCRIPTS_DIR/run-reviewers.sh" "$round_dir" "${degraded[@]}"
-"$SCRIPTS_DIR/aggregate.sh" "$round_dir"
+"$SCRIPTS_DIR/aggregate-findings.sh" "$round_dir"
 # The guide comes before the auto-fix: a finding tied to one of its Architect's attention items is part of that
 # decision and is left to the owner. A failed guide does not hold back the findings: they are fixed and published
 # anyway (without that match), the guide can be re-run alone. The fix commits are covered by the delta round below.
 if [[ "$guide" == true ]]; then
-  "$SCRIPTS_DIR/guide.sh" "$round_dir" >/dev/null || log "WARNING: review guide failed; findings are published without it"
+  "$SCRIPTS_DIR/write-review-guide.sh" "$round_dir" >/dev/null || log "WARNING: review guide failed; findings are published without it"
 fi
 # Fixes are pushed to the PR, so they run only together with publication. A failed auto-fix does not stop the round:
 # its findings are published as not fixed.
 if [[ "$fix" == true && "$publish" == true ]]; then
-  "$SCRIPTS_DIR/fix.sh" "$round_dir" || log "WARNING: auto-fix failed; findings are published without fixes"
+  "$SCRIPTS_DIR/autofix-findings.sh" "$round_dir" || log "WARNING: auto-fix failed; findings are published without fixes"
 fi
 # Publication comes after the push: if it fails, the fix commits are in the PR without the comments that explain
-# them. Both steps of the recovery are safe to repeat (publish.sh posts only what is missing; fix.sh does not fix
+# them. Both steps of the recovery are safe to repeat (publish-to-pr.sh posts only what is missing; autofix-findings.sh does not fix
 # again), so say what to run instead of leaving a half-done round.
-if [[ "$publish" == true ]] && ! "$SCRIPTS_DIR/publish.sh" "$round_dir"; then
+if [[ "$publish" == true ]] && ! "$SCRIPTS_DIR/publish-to-pr.sh" "$round_dir"; then
   if [[ -f "$round_dir/fixes.json" ]] && jq -e '.pushed == true' "$round_dir/fixes.json" >/dev/null; then
     log "ERROR: publication failed after the auto-fix pushed $(jq -r '"\(.head_before[:7])..\(.head_after[:7])"' \
       "$round_dir/fixes.json") to the PR. Recover with:"
-    log "  scripts/review/publish.sh ${round_dir#"$REPO_ROOT"/}"
+    log "  scripts/review/publish-to-pr.sh ${round_dir#"$REPO_ROOT"/}"
     log "  scripts/review/pr-review.sh $pr --delta --no-fix"
   fi
   exit 1

@@ -7,12 +7,12 @@ without a model and copies the lane checklist; the `review-lane` agent judges th
 
   <round>/lanes.json                         — lanes that are on, with the reasons; lanes that are off
   <round>/bundle/lanes/<lane>/facts.md       — facts of the lane (no judgement)
-  <round>/bundle/lanes/<lane>/checklist.md   — copy of scripts/review/lanes/<lane>.md from the working tree
+  <round>/bundle/lanes/<lane>/checklist.md   — copy of scripts/review/specialist-lane-checklists/<lane>.md from the working tree
   <round>/bundle/adr/                        — ADRs at the PR head, when any lane is on
 
-Usage: scripts/review/lanes.py <round-dir>
-       scripts/review/lanes.py --protected <base> <head> <main-ref>
-         reasons why the change base..head may not be an automatic fix (one per line; exit 1 if any) — fix.sh
+Usage: scripts/review/specialist_lanes.py <round-dir>
+       scripts/review/specialist_lanes.py --protected <base> <head> <main-ref>
+         reasons why the change base..head may not be an automatic fix (one per line; exit 1 if any) — autofix-findings.sh
 Env:   PR_REVIEW_LANES       auto (default) | none | comma-separated lanes to force (e.g. db,api)
        PR_REVIEW_LANE_TOOLS  1 (default) | 0 — run external tools (squawk, oasdiff, redocly); 0 in tests/offline
 """
@@ -631,7 +631,7 @@ def main() -> None:
         print("\n".join(reasons))
         sys.exit(1 if reasons else 0)
     if len(sys.argv) != 2:
-        sys.exit("usage: lanes.py <round-dir> | lanes.py --protected <base> <head> <main-ref>")
+        sys.exit("usage: specialist_lanes.py <round-dir> | specialist_lanes.py --protected <base> <head> <main-ref>")
     round_dir = Path(sys.argv[1]).resolve()
     if not (round_dir / "meta.json").is_file():
         sys.exit(f"[pr-review] ERROR: not a round directory: {round_dir}")
@@ -661,7 +661,7 @@ def main() -> None:
         shown = reasons[:MAX_REASONS] + ([f"… and {len(reasons) - MAX_REASONS} more"] if len(reasons) > MAX_REASONS else [])
         d = lanes_dir / lane
         d.mkdir(parents=True, exist_ok=True)
-        shutil.copy(scripts_dir / "lanes" / f"{lane}.md", d / "checklist.md")
+        shutil.copy(scripts_dir / "specialist-lane-checklists" / f"{lane}.md", d / "checklist.md")
         facts = rnd.header(lane, shown) + getattr(rnd, f"facts_{lane}")()
         (d / "facts.md").write_text("\n".join(facts) + "\n")
         on.append({"id": lane, "reasons": shown})

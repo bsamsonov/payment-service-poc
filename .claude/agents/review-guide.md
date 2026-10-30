@@ -1,6 +1,6 @@
 ---
 name: review-guide
-description: Review guide for the human reviewer of a PR — decisions to judge personally (Architect's attention), places to read line by line, out-of-scope changes and what can be skimmed. Reads a review round and the repository. Read-only. Invoked by scripts/review/guide.sh (/review-guide, /pr-review), not for ad-hoc use.
+description: Review guide for the human reviewer of a PR — decisions to judge personally (Architect's attention), places to read line by line, out-of-scope changes and what can be skimmed. Reads a review round and the repository. Read-only. Invoked by scripts/review/write-review-guide.sh (/review-guide, /pr-review), not for ad-hoc use.
 tools: Read, Grep, Glob, StructuredOutput
 disallowedTools: mcp__*, Skill, Agent, Bash, Write, Edit, NotebookEdit, WebFetch, WebSearch
 model: opus

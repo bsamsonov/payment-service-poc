@@ -7,7 +7,7 @@
 #                 decisions = handed to the owner)
 #   report.md   — "Auto-fix" section
 #
-# A fix is kept only if the fixer reports it fixed, the change passes lanes.py --protected (no guards, spec, ADRs,
+# A fix is kept only if the fixer reports it fixed, the change passes specialist_lanes.py --protected (no guards, spec, ADRs,
 # API contract, migrations, ports, package-info, port implementations and their wiring, main code of more than one
 # module; no suppressions; tests only in new files), the commit hooks accept it and the fast check is green.
 # Otherwise it is rolled back and the finding stays with the owner.
@@ -21,7 +21,7 @@
 # `.review/` is not committed).
 # Review threads are never resolved here: the owner checks the fix commit and resolves the thread.
 #
-# Usage: scripts/review/fix.sh <round-dir> [--force]
+# Usage: scripts/review/autofix-findings.sh <round-dir> [--force]
 #   --force  run again although fixes.json of the round exists
 # Switched off by `fixer off` in reviewers.conf / .review/reviewers.local, PR_REVIEW_SKIP=fixer or PR_REVIEW_FIX=0.
 # Env: PR_REVIEW_FIX_MODEL (default opus), PR_REVIEW_FIX_EFFORT (default medium), PR_REVIEW_FIX_PUSH (1 | 0 — keep
@@ -31,14 +31,14 @@ set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude gh git jq timeout python3
 
-round_dir="${1:?usage: fix.sh <round-dir> [--force]}"
+round_dir="${1:?usage: autofix-findings.sh <round-dir> [--force]}"
 force=false
 [[ "${2:-}" == "--force" ]] && force=true
 round_dir="$(cd "$round_dir" && pwd)"
 round_rel="${round_dir#"$REPO_ROOT"/}"
 agg="$round_dir/aggregate.json"
 fixes="$round_dir/fixes.json"
-[[ -f "$agg" ]] || die "no aggregate.json in $round_rel; run aggregate.sh first"
+[[ -f "$agg" ]] || die "no aggregate.json in $round_rel; run aggregate-findings.sh first"
 pr="$(jq -r .pr "$round_dir/meta.json")"
 round="$(jq -r .round "$round_dir/meta.json")"
 head_sha="$(jq -r .head_sha "$round_dir/meta.json")"
@@ -149,7 +149,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
     --model "${PR_REVIEW_FIX_MODEL:-opus}" \
     --effort "${PR_REVIEW_FIX_EFFORT:-medium}" \
     --output-format json \
-    --json-schema "$(cat "$SCRIPTS_DIR/fix.schema.json")" \
+    --json-schema "$(cat "$SCRIPTS_DIR/autofix.schema.json")" \
     --permission-mode dontAsk \
     --allowedTools "Read,Grep,Glob,Edit,Write,Bash(./mvnw:*)" \
     --disallowedTools "Agent,Skill,NotebookEdit,WebFetch,WebSearch" \
@@ -205,7 +205,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
       fi
       git -C "$wt" commit -q -m "$test_subject" \
         -m "Test changes of the auto-fix of $about${fix_sha:+ (code: ${fix_sha:0:7})}. Kept apart from the code so that
-test changes are reviewed on their own; an auto-fix adds tests only in new files (lanes.py --protected)." \
+test changes are reviewed on their own; an auto-fix adds tests only in new files (specialist_lanes.py --protected)." \
         -m "Auto-fix: #$pr $id" \
         >>"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
       test_sha="$(git -C "$wt" rev-parse HEAD)"
@@ -216,7 +216,7 @@ test changes are reviewed on their own; an auto-fix adds tests only in new files
     rollback_to "$before"
     add_item "$id" not_fixed "" "commit hooks rejected the fix (see logs/fixer-$fid.commit.log)" "$files" "$secs" "$cost"; continue
   fi
-  if ! guard="$(cd "$wt" && python3 "$SCRIPTS_DIR/lanes.py" --protected "$before" HEAD "$main_ref")"; then
+  if ! guard="$(cd "$wt" && python3 "$SCRIPTS_DIR/specialist_lanes.py" --protected "$before" HEAD "$main_ref")"; then
     rollback_to "$before"
     add_item "$id" owner "" "the fix touches what needs the owner: $(paste -sd ';' <<<"$guard" | sed 's/;/; /g')" \
       "$files" "$(( SECONDS - start ))" "$cost"; continue

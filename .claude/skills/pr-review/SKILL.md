@@ -8,9 +8,9 @@ argument-hint: "<pr> [--delta] [--allow-degraded] [--no-guide] [--no-publish] [-
 
 Runs `scripts/review/pr-review.sh`, which does all the work outside this session's context:
 
-1. `bundle.sh` — `.review/<pr>/<round>/bundle/`: diff, full changed files, spec, `docs/review-checklist.md`,
+1. `build-review-bundle.sh` — `.review/<pr>/<round>/bundle/`: diff, full changed files, spec, `docs/review-checklist.md`,
    `docs/review-context.md` (from the PR head), `signals.md` (facts from the diff), `docs/review-attention.md` and
-   `docs/product.md` (from the PR head, else the base branch). `lanes.py` decides which specialist lanes the diff
+   `docs/product.md` (from the PR head, else the base branch). `specialist_lanes.py` decides which specialist lanes the diff
    of the round switches on (`lanes.json` with the reasons) and writes their facts without a model:
    | Lane | Switched on by | Facts |
    |---|---|---|
@@ -18,7 +18,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    | `api` | `api/**`, `adapter/in/web/**` | `oasdiff breaking` (docker), `redocly lint`, full contract at the head |
    | `boundaries` | new package, `package-info.java`, new dependency between components, ports, events | components, new/removed dependencies, cross-module edges, cycles |
    | `guards` | architecture rules, analyzer config, `pom.xml`, CI, hooks, `AGENTS.md`, review docs, suppressions | changed guard paths, suppressions and skips, removed rule lines, thresholds |
-   In `--delta` a lane runs only when the new commits touch it again. Lane checklists: `scripts/review/lanes/<lane>.md`.
+   In `--delta` a lane runs only when the new commits touch it again. Lane checklists: `scripts/review/specialist-lane-checklists/<lane>.md`.
 2. `run-reviewers.sh` — in parallel: L1 `review-checklist` (sonnet); L2 `review-bugs` (opus), OpenCode
    `deepseek-v4-pro` and `glm-5.3` (on a bundle copy outside the repo), built-in `/code-review` (headless);
    L3 `review-lane` (opus), one run per lane that is on. Lane findings are `drift` (breaks a recorded decision) or
@@ -28,19 +28,19 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    `.review/reviewers.local` (`<id> on|off`, not committed) and by `--skip=<ids>` for one run; a reviewer that is
    off is recorded as `skipped` (`disabled`). Quorum: L1, at least one L2 reviewer and every lane switched on by the
    diff must succeed, counting only reviewers that are on; otherwise exit code 3.
-3. `aggregate.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
+3. `aggregate-findings.sh` — `review-aggregator` (opus) verifies every finding against the code → `aggregate.json`,
    `report.md` (with the lanes and why they were switched on), `stats.tsv`.
-4. `guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
+4. `write-review-guide.sh` — `review-guide` (opus) writes the guide for the human from the same round, the raw reports and
    `aggregate.json` → `guide.json`, `guide.md` (**Architect's attention** — up to 7 hard-to-reverse decisions, each
    with the ids of findings that belong to it, then places to read line by line, out-of-scope changes, findings,
    what to skim), plus two Russian documents for the owner that are not posted: `guide.ru.md` (reading version) and
    `walkthrough.ru.md` (code walkthrough). Same as `/review-guide`; skipped with `--no-guide`; a failure here does
    not stop the auto-fix or publication of the findings. Runs before the auto-fix, so that the fixer leaves the
    findings of an attention item to the owner.
-5. `fix.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
+5. `autofix-findings.sh` — auto-fix: for every confirmed finding (most severe first) the `review-fixer` prompt (opus, effort
    medium) fixes it in a worktree of the PR branch at the reviewed commit, or declines. A finding listed by an
    attention item of `guide.json`, or on its file within 5 lines (`PR_REVIEW_FIX_NEAR`), goes to the owner without
-   a fixer run. The fix is kept only if `lanes.py --protected` passes (no guards, spec, ADRs, API contract,
+   a fixer run. The fix is kept only if `specialist_lanes.py --protected` passes (no guards, spec, ADRs, API contract,
    migrations, ports, `package-info`, port implementations or their wiring in `config`, main code of more than one
    module, no suppressions; tests only in new files, which do not switch themselves off by an assumption or
    conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
@@ -49,7 +49,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).
    Runs only with publication; skipped when the PR head moved or the PR comes from a fork; off with `--no-fix` or
    `fixer off`.
-6. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide; each comment
+6. `publish-to-pr.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide; each comment
    says "Auto-fixed in `<sha>`" (and the test commit) or why it was not fixed. Threads stay open: the owner checks and resolves them.
 7. If fixes were pushed: one more round `pr-review.sh <pr> --delta --no-fix` over the fix commits (confirms the
    fixes, catches regressions; never fixes again, so it cannot loop).
@@ -72,7 +72,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    10 lines: number of findings by severity, the top three Architect's attention items, the top places to read,
    links to the posted review and guide, the full paths of `guide.ru.md` and `walkthrough.ru.md`, failed reviewers if any. If the guide failed, say so and offer
    `/review-guide <pr>`.
-5. Confirmed findings are fixed by the pipeline (`fix.sh` above); report how many were fixed and which are left
+5. Confirmed findings are fixed by the pipeline (`autofix-findings.sh` above); report how many were fixed and which are left
    (`fixes.json`, reasons). The user resolves every thread, also the auto-fixed ones. For a finding left to the
    user: when asked to fix it, fix it in a separate commit (`fix(<scope>): …`) and reply in the thread; when the
    user decides it is not a bug, reply with the reason. Then the next round is `/pr-review <pr> --delta`.
