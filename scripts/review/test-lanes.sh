@@ -231,6 +231,8 @@ put "$J/application/Pay.java" 'package x.app.application;
 import x.app.domain.Money;
 public class Pay { Money m; int fixedTwice; }'
 fix_commit; protected "two modules" "changes main code in 2 modules at once"
+printf '#!/bin/sh\nexec java "$@"\n' >mvnw
+fix_commit; protected "maven wrapper" "\`mvnw\` is a guard"
 put src/test/java/x/app/PayTest.java 'class PayTest { @Test void pays() {} }'
 fix_commit; protected "new test file: allowed" -
 printf '  @Test void more() {}\n' >>src/test/java/x/app/PayTest.java
