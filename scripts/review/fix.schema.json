@@ -5,7 +5,7 @@
   "properties": {
     "status": {"type": "string", "enum": ["fixed", "declined"]},
     "scope": {"type": "string", "description": "Conventional Commits scope of the fix"},
-    "summary": {"type": "string", "description": "Imperative, lowercase commit subject, at most 60 characters"},
+    "summary": {"type": "string", "description": "Imperative, lowercase commit subject, at most 40 characters"},
     "reason": {"type": "string"},
     "files": {"type": "array", "items": {"type": "string"}}
   }
