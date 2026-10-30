@@ -36,10 +36,10 @@ final class DomainCodes {
 
     static String outcome(ProviderOutcome outcome) {
         return switch (outcome) {
-            case ProviderOutcome.Succeeded succeeded -> "SUCCEEDED";
-            case ProviderOutcome.Declined declined -> "DECLINED";
-            case ProviderOutcome.Rejected rejected -> "REJECTED";
-            case ProviderOutcome.Unknown unknown -> "UNKNOWN";
+            case ProviderOutcome.Succeeded _ -> "SUCCEEDED";
+            case ProviderOutcome.Declined _ -> "DECLINED";
+            case ProviderOutcome.Rejected _ -> "REJECTED";
+            case ProviderOutcome.Unknown _ -> "UNKNOWN";
         };
     }
 }
