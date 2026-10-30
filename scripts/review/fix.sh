@@ -16,8 +16,9 @@
 # they still compile and pass without the test commit.
 # Findings tied to an Architect's attention item of guide.json (listed in its `findings`, or on the same file within
 # PR_REVIEW_FIX_NEAR lines of it) are not fixed: they belong to that decision and go to the owner.
-# Fix commits are marked: `(auto-fix R<n>-F<k>)` at the end of the subject and an `Auto-fix: R<n>-F<k>` trailer
-# (`git log --grep '^Auto-fix:'` lists them).
+# Fix commits are marked: `(auto-fix R<n>-F<k>)` at the end of the subject and an `Auto-fix: #<pr> R<n>-F<k>`
+# trailer (`git log --grep '^Auto-fix:'` lists them; the PR number keeps the id meaningful after the merge, since
+# `.review/` is not committed).
 # Review threads are never resolved here: the owner checks the fix commit and resolves the thread.
 #
 # Usage: scripts/review/fix.sh <round-dir> [--force]
@@ -189,7 +190,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
   git -C "$wt" reset -q -- src/test 2>/dev/null || true
   fix_sha="" test_sha="" committed=true
   if ! git -C "$wt" diff --cached --quiet; then
-    git -C "$wt" commit -q -m "$prefix$summary$suffix" -m "Auto-fix of $about" -m "Auto-fix: $id" \
+    git -C "$wt" commit -q -m "$prefix$summary$suffix" -m "Auto-fix of $about" -m "Auto-fix: #$pr $id" \
       >"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
     fix_sha="$(git -C "$wt" rev-parse HEAD)"
   fi
@@ -204,7 +205,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
       git -C "$wt" commit -q -m "$test_subject" \
         -m "Test changes of the auto-fix of $about${fix_sha:+ (code: ${fix_sha:0:7})}. Kept apart from the code so that
 test changes are reviewed on their own; an auto-fix adds tests only in new files (lanes.py --protected)." \
-        -m "Auto-fix: $id" \
+        -m "Auto-fix: #$pr $id" \
         >>"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
       test_sha="$(git -C "$wt" rev-parse HEAD)"
       [[ -n "$fix_sha" ]] || { fix_sha="$test_sha" test_sha=""; }

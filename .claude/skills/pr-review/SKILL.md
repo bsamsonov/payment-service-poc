@@ -45,7 +45,8 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    module, no suppressions; tests only in new files, which do not switch themselves off by an assumption or
    conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
    `fix(<scope>): … (auto-fix R<n>-F<k>)` with the code and, if tests changed, one `test(<scope>): cover the
-   auto-fix of R<n>-F<k>`, both with an `Auto-fix: R<n>-F<k>` trailer; then a fast-forward push → `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).
+   auto-fix of R<n>-F<k>`, both with an `Auto-fix: #<pr> R<n>-F<k>` trailer; then a fast-forward push →
+   `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).
    Runs only with publication; skipped when the PR head moved or the PR comes from a fork; off with `--no-fix` or
    `fixer off`.
 6. `publish.sh` — one PR review (event COMMENT) with inline comments + one comment with the guide; each comment
