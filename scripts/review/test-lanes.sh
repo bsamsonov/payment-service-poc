@@ -237,6 +237,16 @@ put src/test/java/x/app/PayTest.java 'class PayTest { @Test void pays() {} }'
 fix_commit; protected "new test file: allowed" -
 printf '  @Test void more() {}\n' >>src/test/java/x/app/PayTest.java
 fix_commit; protected "line added to an existing test" "existing test \`src/test/java/x/app/PayTest.java\` changed"
+put src/main/resources/db/migration/V1__init.sql 'CREATE TABLE payments (id uuid PRIMARY KEY);'
+fix_commit; protected "migration already on main" "is a migration that already exists"
+put src/test/java/x/app/ArchitectureTest.java 'class ArchitectureTest { void domainIsPure() { return; } }'
+fix_commit; protected "architecture rule" "\`src/test/java/x/app/ArchitectureTest.java\` is a guard"
+git mv src/test/java/x/app/PayTest.java src/test/java/x/app/PaymentTest.java
+fix_commit; protected "test renamed" "(test) renamed to"
+put src/test/java/x/app/OldTest.java 'class OldTest { @Test void a() {} }'
+git add -A && git commit -qm "pr test"
+git rm -q src/test/java/x/app/OldTest.java
+fix_commit; protected "test deleted" "(test) deleted"
 put src/test/java/x/app/SkipTest.java 'class SkipTest { @Test void s() { assumeTrue(false); } }'
 fix_commit; protected "new test that switches itself off" "test switched off at run time"
 
