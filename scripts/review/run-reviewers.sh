@@ -12,7 +12,7 @@
 #        PR_REVIEW_CODE_REVIEW_MODEL  model for the built-in /code-review (default: opus)
 #
 # Quorum: L1 (checklist) must succeed, at least one L2 reviewer must succeed and every L3 lane switched on for the
-# round (lanes.json, written by lanes.py) must succeed — counting only reviewers that are on (a level with every
+# round (lanes.json, written by specialist_lanes.py) must succeed — counting only reviewers that are on (a level with every
 # reviewer off is not required, a lane that is off is not waited for); otherwise exit 3 unless --allow-degraded (recorded in
 # quorum.json). A lane is required because nothing else covers its area: a migration PR without the db lane is worse
 # than one bug-hunting model less.
@@ -143,7 +143,7 @@ JSON
 claude_lane() {
   local lane="$1" id="$2"
   [[ -f "$bundle/lanes/$lane/checklist.md" && -f "$bundle/lanes/$lane/facts.md" ]] || {
-    echo "lane $lane is not prepared in $bundle_rel/lanes/ (run lanes.py, or set PR_REVIEW_LANES)" >"$round_dir/logs/$id.err"
+    echo "lane $lane is not prepared in $bundle_rel/lanes/ (run specialist_lanes.py, or set PR_REVIEW_LANES)" >"$round_dir/logs/$id.err"
     return 1
   }
   claude_agent review-lane "$id" "Lane: \`$lane\`. Checklist: \`$bundle_rel/lanes/$lane/checklist.md\`; facts: \`$bundle_rel/lanes/$lane/facts.md\`."

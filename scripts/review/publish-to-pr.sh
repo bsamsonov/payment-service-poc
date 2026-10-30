@@ -2,21 +2,21 @@
 # Publish a round to the PR:
 #   - one review (event COMMENT) with an inline comment per confirmed finding; findings whose line is not part of
 #     the PR diff go into the review body;
-#   - one PR comment with guide.md (written by guide.sh), when the round has one.
+#   - one PR comment with guide.md (written by write-review-guide.sh), when the round has one.
 # Inline comments open review threads; the ruleset requires all threads to be resolved before merge.
-# After an auto-fix (fix.sh, fixes.json) every comment says whether the finding was fixed and in which commit; the
+# After an auto-fix (autofix-findings.sh, fixes.json) every comment says whether the finding was fixed and in which commit; the
 # thread is still left open for the owner to check the fix and resolve it.
 #
 # Idempotent: each step is recorded in published.json right after it succeeds and is not repeated on a re-run
 # (e.g. after the guide comment failed); --force posts again.
 #
-# Usage: scripts/review/publish.sh <round-dir> [--guide-only] [--dry-run | --force]
+# Usage: scripts/review/publish-to-pr.sh <round-dir> [--guide-only] [--dry-run | --force]
 #   --guide-only  post only the guide (a round without AI review, or when the review was posted already)
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require gh jq awk
 
-round_dir="${1:?usage: publish.sh <round-dir> [--guide-only] [--dry-run | --force]}"
+round_dir="${1:?usage: publish-to-pr.sh <round-dir> [--guide-only] [--dry-run | --force]}"
 shift
 dry_run=false force=false guide_only=false
 for arg in "$@"; do
@@ -31,9 +31,9 @@ round_dir="$(cd "$round_dir" && pwd)"
 agg="$round_dir/aggregate.json"
 guide="$round_dir/guide.md"
 if [[ "$guide_only" == true ]]; then
-  [[ -f "$guide" ]] || die "no guide.md in $round_dir; run guide.sh first"
+  [[ -f "$guide" ]] || die "no guide.md in $round_dir; run write-review-guide.sh first"
 else
-  [[ -f "$agg" ]] || die "no aggregate.json in $round_dir; run aggregate.sh first (or use --guide-only)"
+  [[ -f "$agg" ]] || die "no aggregate.json in $round_dir; run aggregate-findings.sh first (or use --guide-only)"
 fi
 pr="$(jq -r .pr "$round_dir/meta.json")"
 round="$(jq -r .round "$round_dir/meta.json")"
@@ -124,7 +124,7 @@ else
 fi
 
 if [[ ! -f "$guide" ]]; then
-  log "no guide.md in this round: guide not posted (scripts/review/guide.sh writes it)"
+  log "no guide.md in this round: guide not posted (scripts/review/write-review-guide.sh writes it)"
 elif url="$(jq -r '.guide.url // empty' "$state")" && [[ -n "$url" ]]; then
   log "guide already posted: $url (use --force to post again)"
 else

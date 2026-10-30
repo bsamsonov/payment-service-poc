@@ -7,14 +7,14 @@
 #                    decisions (rejected as "design decision" → Architect's attention), drift, needs_decision
 #                    (L3 lanes: kinds of findings in the raw report), confirmed_ids
 #
-# Usage: scripts/review/aggregate.sh <round-dir> [--reuse]
+# Usage: scripts/review/aggregate-findings.sh <round-dir> [--reuse]
 #   --reuse  do not call the aggregator again; re-render from logs/aggregator.json
-# The guide for the human reviewer is written by guide.sh from the same round.
+# The guide for the human reviewer is written by write-review-guide.sh from the same round.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout
 
-round_dir="${1:?usage: aggregate.sh <round-dir> [--reuse]}"
+round_dir="${1:?usage: aggregate-findings.sh <round-dir> [--reuse]}"
 reuse=false
 [[ "${2:-}" == "--reuse" ]] && reuse=true
 round_dir="$(cd "$round_dir" && pwd)"

@@ -1,6 +1,6 @@
 ---
 name: review-fixer
-description: Fixer for /pr-review — fixes one finding confirmed by the aggregator in a worktree of the PR branch, with the smallest change that removes the defect, or declines with a reason. Invoked by scripts/review/fix.sh (one run per finding), not for ad-hoc use.
+description: Fixer for /pr-review — fixes one finding confirmed by the aggregator in a worktree of the PR branch, with the smallest change that removes the defect, or declines with a reason. Invoked by scripts/review/autofix-findings.sh (one run per finding), not for ad-hoc use.
 tools: Read, Grep, Glob, Edit, Write, Bash
 disallowedTools: mcp__*, Skill, Agent, NotebookEdit, WebFetch, WebSearch
 model: opus

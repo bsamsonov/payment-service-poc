@@ -26,7 +26,7 @@ done
 round_dir="$(cd "$round_dir" && pwd)"
 round_rel="${round_dir#"$REPO_ROOT"/}"
 guide="$round_dir/guide.json"
-[[ -f "$guide" ]] || die "no guide.json in $round_rel; run guide.sh first"
+[[ -f "$guide" ]] || die "no guide.json in $round_rel; run write-review-guide.sh first"
 pr="$(jq -r .pr "$round_dir/meta.json")"
 round="$(jq -r .round "$round_dir/meta.json")"
 head_sha="$(jq -r .head_sha "$round_dir/meta.json")"

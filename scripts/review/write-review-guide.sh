@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Write the guide for the human reviewer with the review-guide subagent:
 #   guide.json — structured result (schema: guide.schema.json)
-#   guide.md   — rendered guide (render-guide.jq), posted as a PR comment by publish.sh
+#   guide.md   — rendered guide (render-guide.jq), posted as a PR comment by publish-to-pr.sh
 #   guide.ru.md, walkthrough.ru.md — Russian reading version and code walkthrough for the owner, not posted
 #                (guide-ru.sh, opus)
 #
 # Works with or without an AI review round. Uses raw/*.md and aggregate.json of the round when they exist.
 #
-# Usage: scripts/review/guide.sh <pr | round-dir> [--reuse] [--no-ru]
-#   <pr>        use the latest round of the current PR head; if there is none, build a bundle (bundle.sh, full diff)
-#   <round-dir> a round directory built by bundle.sh (this is how pr-review.sh calls it)
+# Usage: scripts/review/write-review-guide.sh <pr | round-dir> [--reuse] [--no-ru]
+#   <pr>        use the latest round of the current PR head; if there is none, build a bundle (build-review-bundle.sh, full diff)
+#   <round-dir> a round directory built by build-review-bundle.sh (this is how pr-review.sh calls it)
 #   --reuse     do not call the agent again; re-render from logs/guide.json
 #   --no-ru     skip the Russian documents
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require claude jq timeout gh
 
-target="${1:?usage: guide.sh <pr | round-dir> [--reuse] [--no-ru]}"
+target="${1:?usage: write-review-guide.sh <pr | round-dir> [--reuse] [--no-ru]}"
 shift
 reuse=false ru=true
 for arg in "$@"; do
@@ -37,7 +37,7 @@ elif [[ "$target" =~ ^[0-9]+$ ]]; then
     log "PR #$target: using round $(basename "$round_dir") of head ${head_sha:0:7}"
   else
     log "PR #$target: no round for head ${head_sha:0:7}; building a bundle"
-    round_dir="$("$SCRIPTS_DIR/bundle.sh" "$target")"
+    round_dir="$("$SCRIPTS_DIR/build-review-bundle.sh" "$target")"
   fi
 else
   die "PR number or round directory expected, got: $target"

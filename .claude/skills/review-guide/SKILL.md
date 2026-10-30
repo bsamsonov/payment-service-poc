@@ -6,11 +6,11 @@ argument-hint: "<pr> [--no-publish] [--reuse] [--no-ru]"
 
 # /review-guide
 
-Runs `scripts/review/guide.sh`, which calls the `review-guide` agent (opus, read-only) outside this session's context.
+Runs `scripts/review/write-review-guide.sh`, which calls the `review-guide` agent (opus, read-only) outside this session's context.
 
 - If `.review/<pr>/` has a round for the current PR head (for example from `/pr-review`), the agent reads its bundle,
   the reviewers' raw reports and `aggregate.json` (confirmed findings and rejections with reasons).
-- Otherwise `bundle.sh` builds a new round with the full PR diff and no AI review.
+- Otherwise `build-review-bundle.sh` builds a new round with the full PR diff and no AI review.
 - In both cases the agent also reads the repository around the change: callers, existing conventions, ADRs.
 
 Output in the round directory: `guide.json` and `guide.md` (What changed, Architect's attention, Read line by line,
@@ -28,9 +28,9 @@ each with a snippet, a GitHub link and a plain explanation, as a developer would
    (re-render from the saved agent output without a new model call), `--no-ru` (skip the Russian version). Tell the
    user that one run costs about $1–1.5 (one opus call) plus about $1 for the two Russian documents, unless `--reuse`.
 2. Run in the background (3–6 minutes) and wait for the notification:
-   `scripts/review/guide.sh <pr> [--reuse] [--no-ru]` with `run_in_background: true`. The last line of stdout is the round
+   `scripts/review/write-review-guide.sh <pr> [--reuse] [--no-ru]` with `run_in_background: true`. The last line of stdout is the round
    directory.
-3. Unless `--no-publish`: `scripts/review/publish.sh <round-dir> --guide-only` posts `guide.md` as a PR comment
+3. Unless `--no-publish`: `scripts/review/publish-to-pr.sh <round-dir> --guide-only` posts `guide.md` as a PR comment
    (idempotent: not posted twice for the same round).
 4. Read only `guide.md`. Report to the user in their language, in at most 10 lines: the top three attention items
    (title, question, `decide_by`), the places to read line by line, out-of-scope changes, the link to the comment,
@@ -43,5 +43,5 @@ each with a snippet, a GitHub link and a plain explanation, as a developer would
 
 - Run it from a checkout of `main` (a worktree is fine): prompts and scripts come from the working tree, while the
   heuristics (`docs/review-attention.md`) and the roadmap (`docs/product.md`) come from the PR head, falling back to
-  the base branch. `guide.sh` warns when the local review tooling differs from `origin/main`.
+  the base branch. `write-review-guide.sh` warns when the local review tooling differs from `origin/main`.
 - The agent writes in English because the guide is posted to the PR.

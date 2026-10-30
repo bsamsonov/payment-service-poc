@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Tests of scripts/review/fix.sh (auto-fix of confirmed findings) on a throwaway repository with a bare remote.
+# Tests of scripts/review/autofix-findings.sh (auto-fix of confirmed findings) on a throwaway repository with a bare remote.
 # The fixer (`claude`) and `gh` are stubs; the fast check is PR_REVIEW_FIX_VERIFY. No models, no network.
 #
-# Usage: scripts/review/test-fix.sh
+# Usage: scripts/review/test-autofix-findings.sh
 set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -78,7 +78,7 @@ status_of() { jq -r --arg id "$1" '.items[] | select(.id == $id) | .status' "$ro
 
 # 1. All outcomes in one round, pushed.
 new_round
-scripts/review/fix.sh "$round" 2>"$work/err" || { fail "fix.sh exit $?"; cat "$work/err"; }
+scripts/review/autofix-findings.sh "$round" 2>"$work/err" || { fail "autofix-findings.sh exit $?"; cat "$work/err"; }
 for pair in R1-F1:fixed R1-F2:owner R1-F3:owner R1-F4:not_fixed R1-F5:not_fixed R1-F6:owner R1-F7:fixed \
             R1-F8:owner R1-F9:owner R1-F10:owner R1-F11:owner R1-F12:not_fixed; do
   [[ "$(status_of "${pair%%:*}")" == "${pair#*:}" ]] || fail "status of ${pair%%:*}: $(status_of "${pair%%:*}"), want ${pair#*:}"
@@ -112,28 +112,28 @@ grep -qP '^1\t1\tfixer\t12\t2\tfix\tok\t' "$round/stats.tsv" || fail "stats row:
 grep -q '^## Auto-fix' "$round/report.md" || fail "report section"
 
 # 2. A second run of the same round does nothing without --force.
-scripts/review/fix.sh "$round" 2>/dev/null
+scripts/review/autofix-findings.sh "$round" 2>/dev/null
 [[ "$(grep -c fixer "$round/stats.tsv")" == 1 ]] || fail "re-run duplicated the stats row"
 
 # 3. The PR head moved since the review → not run.
 new_round
-scripts/review/fix.sh "$round" 2>/dev/null   # origin/feat/x is now ahead of the reviewed head
+scripts/review/autofix-findings.sh "$round" 2>/dev/null   # origin/feat/x is now ahead of the reviewed head
 jq -e '.status == "skipped" and (.reason | test("head moved"))' "$round/fixes.json" >/dev/null || fail "head moved: $(jq -c . "$round/fixes.json")"
 
 # 4. Push off → commits stay in the worktree.
 git push -q -f origin "$head:refs/heads/feat/x"
 new_round
-PR_REVIEW_FIX_PUSH=0 scripts/review/fix.sh "$round" 2>/dev/null
+PR_REVIEW_FIX_PUSH=0 scripts/review/autofix-findings.sh "$round" 2>/dev/null
 jq -e '(.pushed | not) and (.push_error | test("switched off"))' "$round/fixes.json" >/dev/null || fail "push off"
 [[ -d "$round/worktree" ]] || fail "worktree removed although the commits were not pushed"
 git worktree remove --force "$round/worktree"
 
 # 5. Switched off in the local override and with PR_REVIEW_FIX=0.
 new_round; echo "fixer off" >"$work/reviewers.local"
-scripts/review/fix.sh "$round" 2>/dev/null
+scripts/review/autofix-findings.sh "$round" 2>/dev/null
 jq -e '.status == "skipped" and (.reason | test("switched off"))' "$round/fixes.json" >/dev/null || fail "fixer off"
 : >"$work/reviewers.local"
-new_round; PR_REVIEW_FIX=0 scripts/review/fix.sh "$round" 2>/dev/null
+new_round; PR_REVIEW_FIX=0 scripts/review/autofix-findings.sh "$round" 2>/dev/null
 jq -e '.status == "skipped"' "$round/fixes.json" >/dev/null || fail "PR_REVIEW_FIX=0"
 
 if [[ $failures -gt 0 ]]; then echo "$failures auto-fix test(s) failed"; exit 1; fi

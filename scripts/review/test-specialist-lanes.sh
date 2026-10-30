@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Tests of scripts/review/lanes.py (triggers and facts of the specialist lanes) on a throwaway git repository.
+# Tests of scripts/review/specialist_lanes.py (triggers and facts of the specialist lanes) on a throwaway git repository.
 # External tools are off (PR_REVIEW_LANE_TOOLS=0): no network, no docker.
 #
-# Usage: scripts/review/test-lanes.sh
+# Usage: scripts/review/test-specialist-lanes.sh
 set -euo pipefail
 
-LANES_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lanes.py"
+LANES_PY="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/specialist_lanes.py"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 export PR_REVIEW_LANE_TOOLS=0 GIT_AUTHOR_NAME=t GIT_AUTHOR_EMAIL=t@t GIT_COMMITTER_NAME=t GIT_COMMITTER_EMAIL=t@t
@@ -30,7 +30,7 @@ put README.md                       'readme'
 git add -A && git commit -qm base
 base="$(git rev-parse HEAD)"
 
-# Run lanes.py for the range base..HEAD (or $2..HEAD) and print the ids of the lanes that are on.
+# Run specialist_lanes.py for the range base..HEAD (or $2..HEAD) and print the ids of the lanes that are on.
 run_lanes() {
   local name="$1" from="${2:-$base}" mode="${3:-full}" dir="$work/rounds/$1"
   mkdir -p "$dir/bundle"
@@ -176,7 +176,7 @@ check_facts "two modules: listed" two-modules boundaries 'changes in 2 modules a
 check "one module: no lanes" "" "$(git checkout -q -B one-module "$mid" && put "$J/refund/domain/Refund.java" 'package x.app.refund.domain;
 public record Refund(long amount, long fee) {}' && git commit -qam one && run_lanes one-module "$mid" delta)"
 
-# lanes.py --protected: what an automatic fix may not change (exit 1 + reasons) and what it may (exit 0).
+# specialist_lanes.py --protected: what an automatic fix may not change (exit 1 + reasons) and what it may (exit 0).
 protected() {  # protected <name> <expected substring or "-" for allowed>; the fix is the last commit
   local out rc=0
   out="$(python3 "$LANES_PY" --protected HEAD~1 HEAD "$base" 2>&1)" || rc=$?

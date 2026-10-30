@@ -2,7 +2,7 @@
 # Tests of the reviewer configuration and the quorum in scripts/review/run-reviewers.sh: reviewers.conf, the local
 # override, --skip (PR_REVIEW_SKIP), --only (PR_REVIEW_REVIEWERS). Reviewers are stubs: no models, no network.
 #
-# Usage: scripts/review/test-reviewers.sh
+# Usage: scripts/review/test-run-reviewers.sh
 set -euo pipefail
 
 SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

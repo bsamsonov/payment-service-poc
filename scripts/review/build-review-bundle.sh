@@ -2,16 +2,16 @@
 # Build a review bundle for a pull request:
 #   .review/<pr>/<round>/bundle/{manifest.md,diff.patch,files/,checklist.md,context.md,attention.md,product.md,
 #                                signals.md,spec/,previous-findings.md,lanes/,adr/}
-#   .review/<pr>/<round>/lanes.json — specialist lanes of the round (lanes.py)
+#   .review/<pr>/<round>/lanes.json — specialist lanes of the round (specialist_lanes.py)
 # Prints the round directory on stdout.
 #
-# Usage: scripts/review/bundle.sh <pr> [--delta]
+# Usage: scripts/review/build-review-bundle.sh <pr> [--delta]
 #   --delta  diff only against the head reviewed in the previous round; previous findings are included.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require gh git jq python3
 
-pr="${1:?usage: bundle.sh <pr> [--delta]}"
+pr="${1:?usage: build-review-bundle.sh <pr> [--delta]}"
 [[ "$pr" =~ ^[0-9]+$ ]] || die "PR number expected, got: $pr"
 mode="full"
 [[ "${2:-}" == "--delta" ]] && mode="delta"
@@ -46,7 +46,7 @@ round_dir="$REVIEW_ROOT/$pr/$round"
 bundle="$round_dir/bundle"
 mkdir -p "$bundle/files" "$round_dir/raw" "$round_dir/logs"
 
-# Fixed a/ b/ prefixes and no external diff tools: publish.sh parses the patch, so user diff config must not leak in.
+# Fixed a/ b/ prefixes and no external diff tools: publish-to-pr.sh parses the patch, so user diff config must not leak in.
 DIFF=(git -c diff.noprefix=false -c diff.mnemonicPrefix=false diff --no-color --no-ext-diff --find-renames
       --src-prefix=a/ --dst-prefix=b/)
 "${DIFF[@]}" "$diff_from" "$head_sha" >"$bundle/diff.patch"
@@ -79,7 +79,7 @@ for pair in "docs/review-attention.md:attention.md" "docs/product.md:product.md"
   fi
 done
 # Facts about the whole PR diff (not the delta): size by area, sensitive paths, markers.
-"$SCRIPTS_DIR/signals.sh" "$round_dir/pr.patch" >"$bundle/signals.md"
+"$SCRIPTS_DIR/diff-facts.sh" "$round_dir/pr.patch" >"$bundle/signals.md"
 
 # Feature spec: from the branch name (feat/NNN-...) or from specs touched by the PR.
 spec_id=""
@@ -100,7 +100,7 @@ if [[ -n "$spec_id" ]]; then
 fi
 
 if [[ "$mode" == "delta" ]]; then
-  # Open findings of all earlier rounds (open-findings.json is maintained by aggregate.sh). Rounds aggregated before
+  # Open findings of all earlier rounds (open-findings.json is maintained by aggregate-findings.sh). Rounds aggregated before
   # it existed fall back to their own findings.
   if [[ -f "$prev_dir/open-findings.json" ]]; then
     cp "$prev_dir/open-findings.json" "$bundle/previous-findings.json"
@@ -123,7 +123,7 @@ jq -n --argjson pr "$pr" --argjson round "$round" --arg mode "$mode" \
   >"$round_dir/meta.json"
 
 # Specialist lanes (L3): which ones this round needs, with their facts and checklists (PR_REVIEW_LANES overrides).
-python3 "$SCRIPTS_DIR/lanes.py" "$round_dir"
+python3 "$SCRIPTS_DIR/specialist_lanes.py" "$round_dir"
 
 {
   echo "# Review bundle — PR #$pr, round $round ($mode)"

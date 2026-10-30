@@ -22,11 +22,11 @@ jobs:
       - name: Test the AC traceability check
         run: scripts/spec/test-check-ac-trace.sh
       - name: Test the triggers of the review lanes
-        run: scripts/review/test-lanes.sh
+        run: scripts/review/test-specialist-lanes.sh
       - name: Test the reviewer configuration and the quorum of the review
-        run: scripts/review/test-reviewers.sh
+        run: scripts/review/test-run-reviewers.sh
       - name: Test the auto-fix of review findings
-        run: scripts/review/test-fix.sh
+        run: scripts/review/test-autofix-findings.sh
       - name: Check AC-to-test traceability (specs/ ↔ @DisplayName)
         run: scripts/spec/check-ac-trace.sh
       - uses: actions/setup-java@v6

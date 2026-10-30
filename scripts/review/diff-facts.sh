@@ -2,12 +2,12 @@
 # Deterministic facts about a PR diff for the human review guide: size by area, sensitive paths, markers in added
 # lines. No judgement here — the review-guide agent must account for every sensitive path it lists.
 #
-# Usage: scripts/review/signals.sh <patch-file> > bundle/signals.md
+# Usage: scripts/review/diff-facts.sh <patch-file> > bundle/signals.md
 #   <patch-file>  the full PR diff with a/ b/ prefixes (pr.patch of the round, not the delta)
 set -euo pipefail
 
-patch="${1:?usage: signals.sh <patch-file>}"
-[[ -s "$patch" ]] || { echo "signals.sh: empty or missing patch: $patch" >&2; exit 1; }
+patch="${1:?usage: diff-facts.sh <patch-file>}"
+[[ -s "$patch" ]] || { echo "diff-facts.sh: empty or missing patch: $patch" >&2; exit 1; }
 
 # One record per added line: path<TAB>line-in-post-change-file<TAB>text; and one per file: status, added, removed.
 tmp="$(mktemp -d)"
