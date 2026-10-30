@@ -15,6 +15,6 @@ class JpaAuditingConfig {
 
     @Bean
     DateTimeProvider auditingDateTimeProvider(Clock clock) {
-        return () -> Optional.of(Instant.now(clock));
+        return () -> Optional.of(Instant.now());
     }
 }
