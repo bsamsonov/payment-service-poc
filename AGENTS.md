@@ -26,7 +26,8 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 ## Workflow
 1. Features (`feat`) start only from an approved spec in `specs/NNN-name/` (`spec.md` → `plan.md` → `tasks.md`).
    Fixes/chores/refactorings need an issue only.
-2. Test first: write a failing test for an acceptance criterion, then the code.
+2. Test first: write a failing test for an acceptance criterion, see it fail on an assertion (not a compile error
+   or a broken fixture), then the code.
 3. **Commit after every logical block** — a task from `tasks.md`, a passing test with its code, a coherent config
    or documentation change. Each commit compiles and its tests pass, so any commit is a safe rollback point.
    This applies to documentation too. Never batch a day of work into one commit.
@@ -94,6 +95,7 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 - Real PostgreSQL via Testcontainers — no H2. External HTTP via WireMock — no mocking of HTTP clients.
 - Test names state behavior; acceptance tests carry the spec-qualified AC id: `@DisplayName("001/AC-2: …")`.
   `scripts/spec/check-ac-trace.sh` (in CI) checks the ids against `specs/`.
+- A test must fail when the behavior it names breaks.
 - Coverage gate: 80% lines (merged unit + integration).
 
 ## Review

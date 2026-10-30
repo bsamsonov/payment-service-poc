@@ -113,7 +113,8 @@ Format: `RC-NN — title` · **Scope** (where it applies) · **Check** (what mus
 ### RC-15 — Tests prove behavior
 - Scope: tests added or changed.
 - Check: negative and edge cases for new behavior (declines, timeouts, duplicates, boundaries); integration tests use
-  Testcontainers/WireMock, not mocked HTTP clients or H2; no sleeps for synchronization; assertions are specific.
+  Testcontainers/WireMock, not mocked HTTP clients or H2; no sleeps for synchronization; assertions are specific;
+  each test fails when the behavior it names breaks.
 - Why: tests that only cover the happy path pass right until production.
 
 ### RC-16 — No silenced checks
