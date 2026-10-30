@@ -27,6 +27,8 @@ jobs:
         run: scripts/review/test-run-reviewers.sh
       - name: Test the auto-fix of review findings
         run: scripts/review/test-autofix-findings.sh
+      - name: Test the guard of the auto-fix (what it may not change)
+        run: scripts/review/test-autofix-guard.sh
       - name: Check AC-to-test traceability (specs/ ↔ @DisplayName)
         run: scripts/spec/check-ac-trace.sh
       - uses: actions/setup-java@v6
