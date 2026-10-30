@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -20,11 +20,11 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
         <archunit.version>1.5.1</archunit.version>
-        <jacoco.version>0.8.15</jacoco.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <spotless.version>3.10.4</spotless.version>
         <palantir-java-format.version>2.101.0</palantir-java-format.version>
-        <error-prone.version>2.50.0</error-prone.version>
-        <nullaway.version>0.14.2</nullaway.version>
+        <error-prone.version>2.51.0</error-prone.version>
+        <nullaway.version>0.14.3</nullaway.version>
         <jspecify.version>1.0.1</jspecify.version>
         <spotbugs-maven-plugin.version>4.10.5.0</spotbugs-maven-plugin.version>
         <findsecbugs.version>1.14.0</findsecbugs.version>
