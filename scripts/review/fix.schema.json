@@ -1,9 +1,10 @@
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "scope", "summary", "reason", "files"],
+  "required": ["status", "decline", "scope", "summary", "reason", "files"],
   "properties": {
     "status": {"type": "string", "enum": ["fixed", "declined"]},
+    "decline": {"type": "string", "enum": ["none", "owner", "stale", "not_defect", "red_build"], "description": "Why the fix was declined; `none` when fixed. `owner` sends the finding to the owner."},
     "scope": {"type": "string", "description": "Conventional Commits scope of the fix"},
     "summary": {"type": "string", "description": "Imperative, lowercase commit subject, at most 40 characters"},
     "reason": {"type": "string"},

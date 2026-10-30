@@ -16,13 +16,13 @@ review bundle (`manifest.md` first; `spec.md` and `diff.patch` there are what th
 
 ## What to do
 1. Read the code at the location and enough around it to understand the defect. Check that it is real **at this
-   commit**: the finding may be stale, already fixed, or wrong. If it is not a defect, decline.
+   commit**: the finding may be stale, already fixed, or wrong. Then decline (`stale` or `not_defect`).
 2. Make the **smallest change that removes the defect**, in the style of the surrounding code. If the defect needs a
    test to stay fixed, add one focused test in a **new** test file. Never change an existing test file, not even by
-   adding a line or a method: if the fix needs that, decline with "needs owner: change of <test file>: <why>" —
-   the owner confirms such changes. The script commits test changes apart from the code.
+   adding a line or a method: if the fix needs that, decline with `owner` and the reason "change of <test file>:
+   <why>" — the owner confirms such changes. The script commits test changes apart from the code.
 3. Run `./mvnw -q spotless:apply` and then `./mvnw -q verify -DskipITs -Djacoco.skip=true`. If it fails because of
-   your change, fix your change; if you cannot make it green, undo your edits and decline.
+   your change, fix your change; if you cannot make it green, undo your edits and decline (`red_build`).
 4. Do not commit, do not push, do not touch git state — the script does it.
 
 Tools: Read, Grep and Glob to read code (also the bundle); Edit and Write to change it; Bash **only** for `./mvnw …`
@@ -32,13 +32,13 @@ from the current directory (other shell commands are denied — that does not st
 - Do not change the spec (`specs/`, `openspec/`), ADRs (`docs/adr/`), the API contract (`api/`), any migration,
   ports (`application/port/`), `package-info.java`, which class implements a port or how ports are wired in
   `config`, main code of more than one module, architecture rules, analyzer or CI configuration, hooks, `pom.xml`, `mvnw`, `AGENTS.md`,
-  `CLAUDE.md` or review documents. If the fix needs any of these, decline with "needs owner: …".
+  `CLAUDE.md` or review documents. If the fix needs any of these, decline with `owner`.
 - Never weaken checks: no `@Disabled`, no suppressions (`@SuppressWarnings`, `NOPMD`, excludes), no removed or
   loosened assertions, no deleted tests, no lowered thresholds, no `--no-verify`.
 - Touch only files the defect requires. No refactoring, renames, formatting of unrelated code, new dependencies
   or "while I am here" improvements.
 - If the right fix is a design choice (several reasonable options with different trade-offs), decline with
-  "needs owner: <the choice>".
+  `owner` and name the choice in the reason.
 
 ## Output
 Answer with one JSON object only (no prose before or after):
@@ -47,7 +47,9 @@ Answer with one JSON object only (no prose before or after):
   "status": "fixed | declined",
   "scope": "conventional-commit scope for the fix, e.g. payment, persistence, api, review",
   "summary": "imperative, lowercase, at most 40 characters: what the fix does (becomes the commit subject)",
-  "reason": "declined: why (stale, not a defect, needs owner: …, verify stays red: …); fixed: one line on the cause",
+  "decline": "none (when fixed) | owner (needs the owner's decision or confirmation) | stale (no longer a defect at
+              this commit) | not_defect (the finding is wrong) | red_build (the fast check stays red)",
+  "reason": "declined: why, in one or two sentences; fixed: one line on the cause",
   "files": ["paths you changed"]
 }
 ```
