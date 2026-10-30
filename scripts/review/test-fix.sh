@@ -19,14 +19,15 @@ cat >"$work/bin/claude" <<'STUB'
 prompt=""
 while [[ $# -gt 0 ]]; do [[ "$1" == -p ]] && { prompt="$2"; shift; }; shift; done
 id="$(sed -n 's/^Fix finding \([^ ]*\) of PR.*/\1/p' <<<"$prompt")"
-answer() { jq -n --arg s "$1" --arg r "$2" '{is_error: false, result: "", total_cost_usd: 0.1,
-  structured_output: {status: $s, scope: "Payment", summary: "guard the stale read with the event version", reason: $r, files: []}}'; }
+answer() { jq -n --arg s "$1" --arg r "$2" --arg d "${3:-none}" '{is_error: false, result: "", total_cost_usd: 0.1,
+  structured_output: {status: $s, decline: $d, scope: "Payment", summary: "guard the stale read with the event version",
+                      reason: $r, files: []}}'; }
 case "$id" in
   *-F1) echo "class A { int fixed; }" >src/A.java; answer fixed "missing guard" ;;
-  *-F2) answer declined "needs owner: retry or fail fast" ;;
+  *-F2) answer declined "Needs the owner to choose: retry or fail fast" owner ;;  # the field decides, not the wording
   *-F3) echo "changed" >>specs/001/spec.md; answer fixed "spec said so" ;;
   *-F4) touch BROKEN; answer fixed "breaks the build" ;;
-  *-F5) answer declined "stale: already fixed at this commit" ;;
+  *-F5) answer declined "needs owner? no: already fixed at this commit" stale ;;
   *-F6) printf '@Disabled\nclass ATest {}\n' >src/ATest.java; answer fixed "flaky test" ;;
   *-F7) echo "class C { int fixed; }" >src/C.java
         echo "class CTest {}" >src/test/CTest.java; answer fixed "code plus a new test file" ;;

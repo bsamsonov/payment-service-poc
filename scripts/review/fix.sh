@@ -173,7 +173,8 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
   files="$(jq -c '.files // []' <<<"$answer")"
   if [[ "$status" != fixed ]]; then
     rollback_to "$before"
-    [[ "$reason" == "needs owner"* ]] && s=owner || s=not_fixed
+    # The kind of refusal is a schema field, not a phrase in the reason: `owner` asks the owner for a decision.
+    [[ "$(jq -r '.decline // ""' <<<"$answer")" == owner ]] && s=owner || s=not_fixed
     add_item "$id" "$s" "" "$reason" "$files" "$secs" "$cost"; continue
   fi
   if [[ -z "$(git -C "$wt" status --porcelain)" ]]; then
