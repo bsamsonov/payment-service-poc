@@ -42,7 +42,7 @@ Runs `scripts/review/pr-review.sh`, which does all the work outside this session
    attention item of `guide.json`, or on its file within 5 lines (`PR_REVIEW_FIX_NEAR`), goes to the owner without
    a fixer run. The fix is kept only if `lanes.py --protected` passes (no guards, spec, ADRs, API contract,
    migrations, ports, `package-info`, port implementations or their wiring in `config`, main code of more than one
-   module, no suppressions; existing tests only get lines added, no assumptions or
+   module, no suppressions; tests only in new files, which do not switch themselves off by an assumption or
    conditional execution), the commit hooks accept it and the fast check is green; per finding one commit
    `fix(<scope>): … (auto-fix R<n>-F<k>)` with the code and, if tests changed, one `test(<scope>): cover the
    auto-fix of R<n>-F<k>`, both with an `Auto-fix: R<n>-F<k>` trailer; then a fast-forward push → `fixes.json` (`fixed` with `sha`/`test_sha` / `not_fixed` / `owner`).

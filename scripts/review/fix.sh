@@ -9,10 +9,11 @@
 #
 # A fix is kept only if the fixer reports it fixed, the change passes lanes.py --protected (no guards, spec, ADRs,
 # API contract, migrations, ports, package-info, port implementations and their wiring, main code of more than one
-# module; no suppressions; existing tests only grow), the commit hooks accept it and the fast check is green. Otherwise it is rolled back and the finding stays with the owner.
-# A fix that also touches tests becomes two commits: `fix(…)` with the code, then `test(…)` with the tests, so that
-# test changes are always reviewed apart. The code commit alone is green: existing tests may only get lines added,
-# so they still compile and pass without the test commit.
+# module; no suppressions; tests only in new files), the commit hooks accept it and the fast check is green.
+# Otherwise it is rolled back and the finding stays with the owner.
+# A fix that also adds tests becomes two commits: `fix(…)` with the code, then `test(…)` with the new test files, so
+# that test changes are always reviewed apart. The code commit alone is green: existing tests are not changed, so
+# they still compile and pass without the test commit.
 # Findings tied to an Architect's attention item of guide.json (listed in its `findings`, or on the same file within
 # PR_REVIEW_FIX_NEAR lines of it) are not fixed: they belong to that decision and go to the owner.
 # Fix commits are marked: `(auto-fix R<n>-F<k>)` at the end of the subject and an `Auto-fix: R<n>-F<k>` trailer
@@ -202,7 +203,7 @@ $(jq '{id, severity, rule, title, path, line, body}' <<<"$finding")" \
       fi
       git -C "$wt" commit -q -m "$test_subject" \
         -m "Test changes of the auto-fix of $about${fix_sha:+ (code: ${fix_sha:0:7})}. Kept apart from the code so that
-test changes are reviewed on their own; existing tests may only get lines added (lanes.py --protected)." \
+test changes are reviewed on their own; an auto-fix adds tests only in new files (lanes.py --protected)." \
         -m "Auto-fix: $id" \
         >>"$round_dir/logs/fixer-$fid.commit.log" 2>&1 || committed=false
       test_sha="$(git -C "$wt" rev-parse HEAD)"
