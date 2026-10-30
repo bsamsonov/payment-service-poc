@@ -41,6 +41,7 @@ Integration tests (`*IT`) need Docker (Testcontainers).
   outside the task's scope, even if they look obviously better — mention them as a follow-up instead.
 - **Simplest code that meets the requirements.** Optimize for the reader: obvious control flow, clear names,
   no clever tricks, speculative abstractions or unused flexibility.
+- **Fix the cause, not the symptom.** A null check, `catch` or default value that only hides a failure is not a fix.
 
 ## Git
 - Conventional Commits: `<type>(<scope>): <subject>` (≤ 72 chars), types: feat fix docs style refactor perf test
