@@ -97,6 +97,7 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
   outside the task's scope, even if they look obviously better — mention them as a follow-up instead.
 - **Simplest code that meets the requirements.** Optimize for the reader: obvious control flow, clear names,
   no clever tricks, speculative abstractions or unused flexibility.
+- **Fix the cause, not the symptom.** A null check, `catch` or default value that only hides a failure is not a fix.
 
 ## Process facts useful for review
 - Features come from `specs/NNN-name/{spec,plan,tasks}.md`; non-goals in the spec must not be implemented.
