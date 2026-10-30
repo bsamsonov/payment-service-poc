@@ -31,7 +31,7 @@ from the current directory (other shell commands are denied — that does not st
 ## Hard limits — decline instead of crossing them
 - Do not change the spec (`specs/`, `openspec/`), ADRs (`docs/adr/`), the API contract (`api/`), any migration,
   ports (`application/port/`), `package-info.java`, which class implements a port or how ports are wired in
-  `config`, main code of more than one module, architecture rules, analyzer or CI configuration, hooks, `pom.xml`, `AGENTS.md`,
+  `config`, main code of more than one module, architecture rules, analyzer or CI configuration, hooks, `pom.xml`, `mvnw`, `AGENTS.md`,
   `CLAUDE.md` or review documents. If the fix needs any of these, decline with "needs owner: …".
 - Never weaken checks: no `@Disabled`, no suppressions (`@SuppressWarnings`, `NOPMD`, excludes), no removed or
   loosened assertions, no deleted tests, no lowered thresholds, no `--no-verify`.

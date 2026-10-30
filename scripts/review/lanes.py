@@ -53,7 +53,7 @@ RULE_FILES = re.compile(
     r"|^src/test/java/archfixture/"
 )
 GUARD_PATHS = re.compile(
-    r"^(config/|pom\.xml$|\.mvn/|\.github/|lefthook\.yml$|scripts/hooks/|scripts/spec/|\.claude/settings\.json$|"
+    r"^(config/|pom\.xml$|mvnw(\.cmd)?$|\.mvn/|\.github/|lefthook\.yml$|scripts/hooks/|scripts/spec/|\.claude/settings\.json$|"
     r"\.claude/hooks/|AGENTS\.md$|CLAUDE\.md$|docs/review-checklist\.md$|docs/review-context\.md$)"
 )
 GUARD_MARKER_PATHS = re.compile(r"^(src/|config/|pom\.xml$|\.github/|\.mvn/|lefthook\.yml$|scripts/)")
