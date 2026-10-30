@@ -70,13 +70,13 @@ public final class PaymentStatusApplier {
                 return Objects.requireNonNull(transaction.execute(tx -> applyOnce(id, target, failureCode, origin)));
             } catch (PaymentConcurrencyConflict conflict) {
                 if (attempt == MAX_ATTEMPTS) {
+                    // No stack trace: whoever handles the rethrown conflict logs it (RC-14)
                     log.error(
                             "Status change of payment {} to {} lost after {} attempts; the payment keeps its last"
                                     + " committed status",
                             id,
                             target,
-                            attempt,
-                            conflict);
+                            attempt);
                     throw conflict;
                 }
                 log.debug("Concurrent change of payment {}, re-applying {} (attempt {})", id, target, attempt + 1);
