@@ -56,6 +56,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Import(TestcontainersConfiguration.class)
 @SpringBootTest
@@ -74,6 +75,9 @@ class PaymentStatusApplierIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private TransactionTemplate transaction;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
@@ -185,6 +189,20 @@ class PaymentStatusApplierIT {
         assertThat(result).isEqualTo(new NoOp());
         assertThat(events(id)).containsExactly(created());
         assertThat(paymentState(id)).isEqualTo(new PaymentRow("FAILED", "card_declined", 0));
+    }
+
+    @Test
+    @DisplayName("001/AC-14: a call inside an open transaction fails fast, since its attempts could not roll back"
+            + " on their own")
+    void refusesToRunInsideAnOpenTransaction() {
+        PaymentId id = storedPayment(PENDING, null);
+
+        assertThatThrownBy(() ->
+                        transaction.executeWithoutResult(tx -> applier.apply(id, PROCESSING, null, PROVIDER_RESPONSE)))
+                .isInstanceOf(IllegalStateException.class);
+
+        assertThat(events(id)).containsExactly(created());
+        assertThat(paymentState(id)).isEqualTo(new PaymentRow("PENDING", null, 0));
     }
 
     @Test
