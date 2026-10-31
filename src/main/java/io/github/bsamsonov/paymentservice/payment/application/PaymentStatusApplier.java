@@ -24,6 +24,7 @@ import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 /**
@@ -62,9 +63,14 @@ public final class PaymentStatusApplier {
      * required for {@code FAILED} and not allowed otherwise.
      *
      * @throws PaymentConcurrencyConflict if the payment kept changing concurrently through every attempt
+     * @throws IllegalStateException if called inside a transaction: an attempt would join it and could not be
+     *     re-applied after a conflict
      */
     public TransitionResult apply(
             PaymentId id, PaymentStatus target, @Nullable FailureCode failureCode, EventOrigin origin) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            throw new IllegalStateException("status change of payment " + id + " must run outside a transaction");
+        }
         for (int attempt = 1; ; attempt++) {
             try {
                 return Objects.requireNonNull(transaction.execute(tx -> applyOnce(id, target, failureCode, origin)));
