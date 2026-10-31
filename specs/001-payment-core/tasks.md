@@ -2,7 +2,8 @@
 
 Each task is one commit (or a few): failing test first, then code; the build is green after each task.
 Tests that cover an AC carry `@DisplayName("001/AC-n: …")`. T1–T3 come first because they retire the plan's risks.
-Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
+PR A (T1–T3) and PR B (T4–T6) predate one PR per task; from T7 on, each task is its own PR (`specs/README.md`);
+the last one sets `status: Implemented`.
 
 ## PR A — setup, contract, schema (AC-12)
 
@@ -37,9 +38,8 @@ Four PRs (`specs/README.md`); the last one sets `status: Implemented`.
   `CodedValueDomainsIT` (every constant of `PaymentStatus`, `FailureCode`, `EventType`, `ActorType`, `EventSource`,
   `ProviderOutcome` is accepted by its domain; the actor/source pairs by the pair check).
 
-## PR C — API: create and read payments (AC-1…AC-9, AC-13, AC-15)
+## API: create and read payments (AC-1…AC-9, AC-13, AC-15)
 
-If it grows past ~600 lines: T7–T8 and T9–T10 as two PRs.
 - [ ] T7 (AC-1, AC-13, AC-15, AC-17) `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`),
   `FakePaymentProvider` (success path), `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`.
   Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column), `ProviderCallTransactionIT` (AC-13).
@@ -57,11 +57,11 @@ If it grows past ~600 lines: T7–T8 and T9–T10 as two PRs.
   `GET /payments?externalReference=…` (≤ 20, newest first, missing parameter → `400`).
   Tests first: `GetPaymentIT`, `FindPaymentsByExternalReferenceIT`.
 
-## PR D — tracing, ADR, final check (AC-16)
+## Tracing, ADR, final check (AC-16)
 
 - [ ] T11 (AC-16) `TraceparentResponseFilter`; trace id in MDC and journal rows.
   Test first: `TracingIT` (with valid, invalid and no `traceparent`).
 - [ ] T12 (docs) ADR-0008 audit architecture; README / living docs updated for the new API.
   Verified by: review; links resolve.
-- [ ] T13 (all) Final check: `scripts/spec/check-ac-trace.sh` passes for AC-1…AC-17, `verify -Pci` green, coverage
-  ≥ 80%; spec `status: Implemented`. Verified by: CI.
+- [ ] T13 (all) (same PR as T12) Final check: `scripts/spec/check-ac-trace.sh` passes for AC-1…AC-17,
+  `verify -Pci` green, coverage ≥ 80%; spec `status: Implemented`. Verified by: CI.
