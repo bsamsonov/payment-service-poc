@@ -101,7 +101,9 @@ Java 25, Spring Boot 4.1 (Spring MVC), PostgreSQL + Flyway, JPA/Hibernate, Resil
 
 ## Process facts useful for review
 - Features come from `specs/NNN-name/{spec,plan,tasks}.md`; non-goals in the spec must not be implemented.
-- A spec is living until its feature PR merges (the last commit sets `Implemented`), then frozen; later behavior
+- A feature ships as one PR per task of `tasks.md` (adjacent tasks marked `(same PR as Tn)` share one); a PR may be
+  stacked on the previous task's PR (its base is that branch, not `main`).
+- A spec is living until its last task PR merges (the last commit sets `Implemented`), then frozen; later behavior
   changes come as a new spec that supersedes or amends ACs of the old one (`specs/README.md`).
 - Project scope, v1 non-goals and the spec roadmap: `docs/product.md`.
 - Decisions live in `docs/adr/` (MADR); accepted ADRs are never edited, only superseded.

@@ -25,6 +25,7 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 
 ## Workflow
 1. Features (`feat`) start only from an approved spec in `specs/NNN-name/` (`spec.md` → `plan.md` → `tasks.md`).
+   **One pull request per task** of `tasks.md`; small adjacent tasks marked `(same PR as Tn)` share one.
    Fixes/chores/refactorings need an issue only.
 2. Test first: write a failing test for an acceptance criterion, see it fail on an assertion (not a compile error
    or a broken fixture; a compiling stub may come first), then the code.
@@ -49,7 +50,12 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 ## Git
 - Conventional Commits: `<type>(<scope>): <subject>` (≤ 72 chars), types: feat fix docs style refactor perf test
   build ci chore revert. Body explains *why* when not obvious.
-- Branches: `feat/NNN-short-name`, `fix/…`, `chore/…`, `docs/…`. Work only through pull requests; `main` is protected.
+- Branches: `feat/NNN-short-name-tN` (the task, or the first task of a shared PR), `fix/…`, `chore/…`, `docs/…`.
+  Work only through pull requests; `main` is protected.
+- Stacked PRs: the next task may start before the previous task's PR merges — branch from that PR's branch and open
+  the PR against it. After the parent merges, `git rebase --onto origin/main <parent-branch>` (before
+  `cleanup-merged.sh --apply` deletes the parent branch), `git push --force-with-lease`, and set the PR base to
+  `main` if GitHub has not retargeted it (`gh pr edit <n> --base main`).
 - Merge strategy: rebase merge (linear history, atomic commits preserved). Before opening a PR, history may be
   tidied with fixups, but not squashed into one commit.
 - After a PR is merged, clean up: `scripts/git/cleanup-merged.sh` (report) → `--apply` removes the branch's clean
