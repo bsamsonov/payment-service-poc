@@ -2,8 +2,8 @@
 <!-- 2–5 lines. Link the issue: Closes #… -->
 
 ## Spec
-<!-- specs/NNN-name/spec.md and the task(s) from tasks.md (e.g. "T7 of T13"; stacked on #… if so), or "n/a" for
-     fix/chore.
+<!-- specs/NNN-name/spec.md and the task(s) from tasks.md (e.g. "T7.2 of T13"; "stacked on #…, merge after it"
+     if so), or "n/a" for fix/chore.
      List the ACs covered by this PR. The last commit of the feature's last PR sets status: Implemented. -->
 - [ ] NNN/AC-1
 - [ ] NNN/AC-2
