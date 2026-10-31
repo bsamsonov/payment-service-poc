@@ -27,7 +27,7 @@ Integration tests (`*IT`) need Docker (Testcontainers).
 1. Features (`feat`) start only from an approved spec in `specs/NNN-name/` (`spec.md` → `plan.md` → `tasks.md`).
    Fixes/chores/refactorings need an issue only.
 2. Test first: write a failing test for an acceptance criterion, see it fail on an assertion (not a compile error
-   or a broken fixture), then the code.
+   or a broken fixture; a compiling stub may come first), then the code.
 3. **Commit after every logical block** — a task from `tasks.md`, a passing test with its code, a coherent config
    or documentation change. Each commit compiles and its tests pass, so any commit is a safe rollback point.
    This applies to documentation too. Never batch a day of work into one commit.
