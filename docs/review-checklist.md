@@ -105,7 +105,7 @@ Format: `RC-NN — title` · **Scope** (where it applies) · **Check** (what mus
 ## Code quality not covered by CI
 
 ### RC-14 — Errors are handled once, at the right layer
-- Scope: `try`/`catch`, exception translation, logging of errors.
+- Scope: `try`/`catch`, null checks and default values, exception translation, logging of errors.
 - Check: no swallowed exceptions; no log-and-rethrow; domain exceptions are translated at the adapter boundary;
   logs carry identifiers and the right level; no null check, `catch` or default value that only hides a failure.
 - Why: double logging hides the real failure; swallowing hides it completely.
