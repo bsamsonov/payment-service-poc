@@ -144,13 +144,13 @@ Architecture: enforced by the module and hexagon ArchUnit rules (`ModuleRules`, 
   contract with a contract test.
 - **Tracing artifact set in Boot 4** (module vs starter, exporter on by default) — verify in T1; export must be off.
 - **Coverage gate 80%** with generated code — excluded from JaCoCo.
-- **Scope size**: ~17 AC. Mitigation: commit per task and four PRs grouped in `tasks.md` (A setup, B domain,
-  C API, D tracing and docs).
+- **Scope size**: ~17 AC. Mitigation: commit per task; PR A (setup) and PR B (domain) group T1–T6, then one PR per
+  task from T7 (`tasks.md`).
 
 ## ADR links
 - ADR-0006 Contract-first API with generated interfaces (PR A).
 - ADR-0007 UUIDv7 identifiers generated in the application (PR A).
-- **ADR-0008 Audit architecture** (new, T12 in PR D): local append-only audit log in the same transaction, the change
+- **ADR-0008 Audit architecture** (new, T12): local append-only audit log in the same transaction, the change
   only (no snapshot) + `sequence_no` guarded by a unique key, provider attempts in a separate log, domains for coded
   values (not reference tables), rejected requests in the `AUDIT` log instead of a table (stdout; target retention set
   by the log platform: `AUDIT` ≥ 12 months, application logs ~30 days; metric and JSON audit marker in 008, #23),
