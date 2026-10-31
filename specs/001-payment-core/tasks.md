@@ -2,8 +2,8 @@
 
 Each task is one commit (or a few): failing test first, then code; the build is green after each task.
 Tests that cover an AC carry `@DisplayName("001/AC-n: …")`. T1–T3 come first because they retire the plan's risks.
-PR A (T1–T3) and PR B (T4–T6) predate one PR per task; from T7 on, each task is its own PR (`specs/README.md`);
-the last one sets `status: Implemented`.
+PR A (T1–T3) and PR B (T4–T6) predate one PR per task; from T7 on, each task is its own PR (`specs/README.md`) and
+updates the living docs its change affects; the last one sets `status: Implemented`.
 
 ## PR A — setup, contract, schema (AC-12)
 
@@ -40,9 +40,13 @@ the last one sets `status: Implemented`.
 
 ## API: create and read payments (AC-1…AC-9, AC-13, AC-15)
 
-- [ ] T7 (AC-1, AC-13, AC-15, AC-17) `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`),
-  `FakePaymentProvider` (success path), `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`.
-  Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column), `ProviderCallTransactionIT` (AC-13).
+- [ ] T7.1 (AC-13) `PaymentProvider` port, `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`;
+  provider attempt and `request_hash` written), `FakePaymentProvider` (success path).
+  Tests first: `ProviderCallTransactionIT` (AC-13), `CreatePaymentUseCaseIT` (`provider_attempts` row in the status
+  change's transaction, `payments.request_hash`; the acceptance tests over HTTP come in T7.2).
+- [ ] T7.2 (AC-1, AC-15, AC-17) `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`;
+  README: the create endpoint.
+  Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column).
 - [ ] T8 (AC-2, AC-3, AC-4) Remaining provider outcomes: `DECLINED` → `402`, `REJECTED` → `502` + ERROR log,
   `UNKNOWN` → `202` `PROCESSING`; `FailureMessages` dictionary; fake provider table complete.
   Tests first: `CreatePaymentIT` cases (parameterized declines, `OutputCaptureExtension`, timeout).
@@ -61,7 +65,7 @@ the last one sets `status: Implemented`.
 
 - [ ] T11 (AC-16) `TraceparentResponseFilter`; trace id in MDC and journal rows.
   Test first: `TracingIT` (with valid, invalid and no `traceparent`).
-- [ ] T12 (docs) ADR-0008 audit architecture; README / living docs updated for the new API.
-  Verified by: review; links resolve.
+- [ ] T12 (docs) ADR-0008 audit architecture; final pass over README / `docs/architecture.md` (each earlier task
+  updated what its change affects). Verified by: review; links resolve.
 - [ ] T13 (all) (same PR as T12) Final check: `scripts/spec/check-ac-trace.sh` passes for AC-1…AC-17,
   `verify -Pci` green, coverage ≥ 80%; spec `status: Implemented`. Verified by: CI.
