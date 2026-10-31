@@ -36,7 +36,8 @@ Integration tests (`*IT`) need Docker (Testcontainers).
    sets `Approved`. After the feature's last PR merges the spec is frozen; later changes go to a new spec
    (`specs/README.md`, Lifecycle).
 5. Do not implement anything listed under a spec's non-goals. Do not guess answers to open questions — ask.
-6. **Done means checked.** End your report with what you ran, what it proves and what you did not verify.
+6. **Done means checked.** After a code change, end your message to the user with what you ran, what it proves
+   and what you did not verify.
 
 ## Code changes
 - **Touch only what the task requires.** No drive-by refactoring, renaming, reformatting or "improvements"
