@@ -52,10 +52,15 @@ Integration tests (`*IT`) need Docker (Testcontainers).
   build ci chore revert. Body explains *why* when not obvious.
 - Branches: `feat/NNN-short-name-tN` (the task, or the first task of a shared PR), `fix/…`, `chore/…`, `docs/…`.
   Work only through pull requests; `main` is protected.
+- PRs merge only into `main`. Task PRs of a spec merge **in `tasks.md` order**, one at a time; only the owner may let
+  a PR that is not stacked on an earlier one go first.
 - Stacked PRs: the next task may start before the previous task's PR merges — branch from that PR's branch and open
-  the PR against it. After the parent merges, `git rebase --onto origin/main <parent-branch>` (before
-  `cleanup-merged.sh --apply` deletes the parent branch), `git push --force-with-lease`, and set the PR base to
-  `main` if GitHub has not retargeted it (`gh pr edit <n> --base main`).
+  a **draft** PR against it (a draft cannot be merged; review it as usual). One level only: never stack on a PR that
+  is itself stacked. After the parent merges, GitHub retargets the PR to `main`; then
+  `git rebase --onto origin/main <fork-point>` (`<fork-point>`: the parent's last commit in this branch), check that
+  `git log origin/main..HEAD` lists only this task's commits, `git push --force-with-lease`. If the rebase had
+  conflicts, run `/pr-review <n> --delta` (rewritten history: a full round against `main`). Then `gh pr ready <n>`
+  and merge after CI is green.
 - Merge strategy: rebase merge (linear history, atomic commits preserved). Before opening a PR, history may be
   tidied with fixups, but not squashed into one commit.
 - After a PR is merged, clean up: `scripts/git/cleanup-merged.sh` (report) → `--apply` removes the branch's clean
