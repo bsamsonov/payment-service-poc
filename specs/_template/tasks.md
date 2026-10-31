@@ -1,11 +1,8 @@
 # NNN. <Feature title> — tasks
 
-Each task is one commit (or a few): failing test first, then code; the build is green after each task.
+Each task is one pull request (≤ ~600 changed lines of non-generated code, tests included) of one or more commits:
+failing test first, then code; the build is green after each commit. Small adjacent tasks may share one PR: the later
+task is marked `(same PR as Tn)`. The last task sets `status: Implemented`.
 
-PRs group the tasks (≤ ~600 changed lines of non-generated code each); the last PR sets `status: Implemented`.
-
-## PR A — <theme>
 - [ ] T1 (AC-1) …
-
-## PR B — <theme>
 - [ ] T2 (AC-2, AC-3) …

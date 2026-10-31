@@ -9,9 +9,11 @@ One folder per feature: `specs/NNN-short-name/` with three short files. Project 
 | `plan.md` | **How**: components, data model and migrations, sequence, transactions/concurrency, test strategy per AC, risks, ADR links | AI drafts in plan mode, human reviews |
 | `tasks.md` | **Steps**: ordered, commit-sized tasks, each mapped to ACs | AI |
 
-A spec covers one coherent feature; split features that are not. A spec ships in **one or more pull requests**:
-`tasks.md` groups the tasks into PRs (`## PR A — …`), each about 600 changed lines of non-generated code at most
-(including tests), green and meaningful on its own. Small PRs keep human and AI review effective.
+A spec covers one coherent feature; split features that are not. A spec ships as **one pull request per task** of
+`tasks.md`: each task is about 600 changed lines of non-generated code at most (including tests), green and
+meaningful on its own. Small adjacent tasks may share one PR: the later task is marked `(same PR as Tn)`.
+Small PRs keep human and AI review effective. The next task may start as a stacked PR before the previous one
+merges (`AGENTS.md`, Git).
 
 ## Lifecycle
 `Draft → Approved → Implemented` (→ `Superseded`). Only the owner sets `Approved`; agents never do.
