@@ -40,7 +40,7 @@ updates the living docs its change affects; the last one sets `status: Implement
 
 ## API: create and read payments (AC-1…AC-9, AC-13, AC-15)
 
-- [ ] T7.1 (AC-13) `PaymentProvider` port, `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`;
+- [x] T7.1 (AC-13) `PaymentProvider` port, `CreatePaymentUseCase` (Tx 1 → provider → Tx 2 via `TransactionTemplate`;
   provider attempt and `request_hash` written), `FakePaymentProvider` (success path).
   Tests first: `ProviderCallTransactionIT` (AC-13), `CreatePaymentUseCaseIT` (`provider_attempts` row in the status
   change's transaction, `payments.request_hash`; the acceptance tests over HTTP come in T7.2).

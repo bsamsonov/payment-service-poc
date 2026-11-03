@@ -10,6 +10,9 @@ public interface PaymentRepository {
     /** Stores a new payment. */
     void add(Payment payment);
 
+    /** A stored payment in its last committed state. */
+    Optional<Payment> findById(PaymentId id);
+
     /**
      * Loads a payment to change its status, together with the last journal sequence number, in one read (one snapshot).
      * The change must be saved with {@link #update} in the same transaction.
