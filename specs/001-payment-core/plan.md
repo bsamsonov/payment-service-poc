@@ -16,13 +16,13 @@ Module `io.github.bsamsonov.paymentservice.payment`; package names below are rel
 
 | Package | Classes | Notes |
 |---|---|---|
-| `domain` | `Payment` (aggregate), `PaymentId` (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` (transition table), `FailureCode`, `PaymentEvent` (+ `EventType`, `ActorType`, `EventSource`), `ProviderOutcome` (sealed: `Succeeded`, `Declined(code, providerCode)`, `Rejected`, `Unknown`), `ProviderAttempt`, `TransitionResult` (`Applied`, `NoOp`, `Rejected`) | no Spring/JPA/Jackson; `Clock` passed in |
-| `application` | `CreatePaymentUseCase`, `GetPaymentQuery`, `PaymentStatusApplier`, `RequestHasher` (canonical JSON → SHA-256), `CreatePaymentCommand`, `BusinessRuleViolation` (collects all 422 errors), ports `PaymentRepository`, `PaymentJournal` (events and provider attempts), `PaymentProvider`, `TraceContext` | may use `spring-tx` (`TransactionTemplate`) only |
+| `domain` | `Payment` (aggregate), `PaymentId` (UUIDv7), `Money`, `CurrencyPolicy`, `PaymentStatus` (transition table), `FailureCode`, `PaymentEvent` (+ `EventType`, `ActorType`, `EventSource`, `EventOrigin`), `RejectionReason`, `BusinessRule` + `RuleViolation` (what `CurrencyPolicy` reports), `ProviderOutcome` (sealed: `Succeeded`, `Declined(code, providerCode)`, `Rejected`, `Unknown`), `ProviderAttempt`, `TransitionResult` (`Applied`, `NoOp`, `Rejected`) | no Spring/JPA/Jackson; `Clock` passed in |
+| `application` | `CreatePaymentUseCase`, `GetPaymentQuery`, `PaymentStatusApplier`, `RequestHasher` (canonical JSON → SHA-256), `CreatePaymentCommand`, `BusinessRuleViolation` (collects all 422 errors, the domain's `RuleViolation`s), ports in `application.port`: `PaymentRepository` (+ `PaymentForChange`), `PaymentJournal` (events and provider attempts), `PaymentProvider` (+ `ProviderCharge`, `ProviderCall`: the calls of one charge, the last one's outcome is the result), `TraceContext`, `PaymentConcurrencyConflict` | may use `spring-tx` (`TransactionTemplate`) only |
 | `adapter.in.web` | `PaymentsController` (implements generated `PaymentsApi`), `PaymentWebMapper`, `ProblemDetailsHandler` (`@RestControllerAdvice`, extends `ResponseEntityExceptionHandler`), `TraceparentResponseFilter`, `FailureMessages` (dictionary), `RejectedRequestAuditLog` (`AUDIT` line for `400`/`422`) | generated code in `adapter.in.web.api` / `.model` |
-| `adapter.out.persistence` | `PaymentEntity`, `PaymentEventEntity` (`@Immutable`), `ProviderAttemptEntity` (`@Immutable`), Spring Data repositories (no delete methods), `JpaPaymentRepository`, `JpaPaymentJournal`, mappers | domain ↔ entity mapping; entities never leave the adapter |
+| `adapter.out.persistence` | `PaymentEntity`, `PaymentEventEntity` (`@Immutable`), `ProviderAttemptEntity` (`@Immutable`), Spring Data repositories (no delete methods), `JpaPaymentRepository`, `JpaPaymentJournal`, `PaymentWithLastSequenceNo` (payment + last `sequence_no` in one query), `DomainCodes` (stored enum codes), mappers | domain ↔ entity mapping; entities never leave the adapter |
 | `adapter.out.provider.fake` | `FakePaymentProvider` | `@ConditionalOnProperty(payments.provider=fake)`; table from spec |
 | `adapter.out.tracing` | `MicrometerTraceContext` | current trace id from Micrometer `Tracer` |
-| `config` | `PaymentsProperties` (`@ConfigurationProperties`: provider, currency allow-list, min/max), `ClockConfig`, `TransactionConfig` | |
+| `config` | `PaymentsProperties` (`@ConfigurationProperties`: provider, currency allow-list, min/max), `ClockConfig`, `JpaAuditingConfig`, `PaymentApplicationConfig` (wires the application classes; uses Boot's `TransactionTemplate`) | |
 
 Status applier algorithm (AC-10, AC-11, AC-14): load the payment and `max(sequence_no)` of its events in one query
 (one snapshot, before the decision) → `payment.apply(target, data)` returns `Applied | NoOp | Rejected` → for
@@ -37,6 +37,13 @@ Reason codes of `TRANSITION_REJECTED`: `transition_not_allowed` (backward or out
 On `ObjectOptimisticLockingFailureException` or a violation of `payment_events_sequence_unique` (the persistence
 adapter turns both into the port's `PaymentConcurrencyConflict`, so `application` knows no JPA): re-read and
 re-apply in a new transaction, at most 3 attempts, then fail loudly (ERROR log; the payment stays in its last committed state).
+The applier refuses to run inside an open transaction (a joined attempt could not roll back on its own). The provider
+attempts of a charge are passed into the applier and appended inside each attempt's transaction, so they commit with
+the resulting status change or event (AC-15) and roll back with it. Optimistic locking relies on the payment entity
+loaded by `findForChange` in the same transaction; the domain carries no version (decided after PR B's review: keep it
+simple while each applier attempt is one transaction).
+Request hash (AC-17): an empty object is omitted like an absent or null field, because storage keeps an empty
+`metadata` as `null` and a reader cannot tell them apart; `{}` and no `metadata` are the same request.
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:

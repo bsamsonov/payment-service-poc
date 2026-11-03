@@ -40,6 +40,11 @@ class JpaPaymentRepository implements PaymentRepository {
     }
 
     @Override
+    public Optional<Payment> findById(PaymentId id) {
+        return payments.findById(id.value()).map(JpaPaymentRepository::toDomain);
+    }
+
+    @Override
     public Optional<PaymentForChange> findForChange(PaymentId id) {
         return payments.findWithLastSequenceNo(id.value())
                 .map(row -> new PaymentForChange(toDomain(row.payment()), row.lastSequenceNo()));

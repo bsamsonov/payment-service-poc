@@ -10,8 +10,9 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * SHA-256 of the canonical form of a request (AC-17): JSON with keys sorted at every level, no whitespace, absent and
- * null fields omitted, strings escaped as in RFC 8785. Spec 002 compares it to detect "same idempotency key, different
- * request". Written by hand because the application layer does not use Jackson.
+ * null fields and empty objects omitted (storage keeps an empty {@code metadata} as null), strings escaped as in RFC
+ * 8785. Spec 002 compares it to detect "same idempotency key, different request". Written by hand because the
+ * application layer does not use Jackson.
  */
 final class RequestHasher {
 
@@ -38,7 +39,7 @@ final class RequestHasher {
         // String order is UTF-16 code unit order, as RFC 8785 requires
         Map<String, Object> sorted = new TreeMap<>();
         object.forEach((key, value) -> {
-            if (value != null) {
+            if (value != null && !(value instanceof Map<?, ?> nested && nested.isEmpty())) {
                 sorted.put((String) key, value);
             }
         });

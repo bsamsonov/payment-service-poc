@@ -82,6 +82,13 @@ class RequestHasherTest {
     }
 
     @Test
+    @DisplayName("an empty metadata object and an absent one are the same request, as both are stored as null")
+    void emptyObjectIsOmitted() {
+        assertThat(RequestHasher.canonicalJson(Map.of("amount", 1999L, "metadata", Map.of())))
+                .isEqualTo("{\"amount\":1999}");
+    }
+
+    @Test
     @DisplayName("strings are escaped as in RFC 8785: quote, backslash and control characters; other text as is")
     void escapesStrings() {
         assertThat(RequestHasher.canonicalJson(Map.of("d", "a\"b\\c\nd\u0001é€")))
