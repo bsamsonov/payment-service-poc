@@ -118,11 +118,22 @@ public final class CreatePaymentUseCase {
 
         ProviderCharge charge = provider.charge(id, amount, command.paymentMethodId());
         List<ProviderAttempt> attempts = attempts(id, charge);
-        switch (charge.outcome()) {
-            case Succeeded _ -> apply(id, PaymentStatus.SUCCEEDED, null, attempts);
-            case Declined declined -> apply(id, PaymentStatus.FAILED, declined.code(), attempts);
-            case Rejected _ -> apply(id, PaymentStatus.FAILED, FailureCode.PROVIDER_ERROR, attempts);
-            case Unknown _ -> apply(id, PaymentStatus.PROCESSING, null, attempts);
+        try {
+            switch (charge.outcome()) {
+                case Succeeded _ -> apply(id, PaymentStatus.SUCCEEDED, null, attempts);
+                case Declined declined -> apply(id, PaymentStatus.FAILED, declined.code(), attempts);
+                case Rejected _ -> apply(id, PaymentStatus.FAILED, FailureCode.PROVIDER_ERROR, attempts);
+                case Unknown _ -> apply(id, PaymentStatus.PROCESSING, null, attempts);
+            }
+        } catch (RuntimeException e) {
+            // Tx 2 rolled back: the charge result exists only here, so it is logged before the failure propagates
+            log.error(
+                    "Payment {}: provider outcome {} not recorded, provider request ids {}",
+                    id,
+                    charge.outcome(),
+                    attempts.stream().map(ProviderAttempt::providerRequestId).toList(),
+                    e);
+            throw e;
         }
         return payments.findById(id).orElseThrow(() -> new IllegalStateException("payment " + id + " vanished"));
     }
