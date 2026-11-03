@@ -13,6 +13,7 @@ import io.github.bsamsonov.paymentservice.payment.domain.Payment;
 import io.github.bsamsonov.paymentservice.payment.domain.PaymentEvent;
 import io.github.bsamsonov.paymentservice.payment.domain.PaymentId;
 import io.github.bsamsonov.paymentservice.payment.domain.PaymentStatus;
+import io.github.bsamsonov.paymentservice.payment.domain.ProviderAttempt;
 import io.github.bsamsonov.paymentservice.payment.domain.RejectionReason;
 import io.github.bsamsonov.paymentservice.payment.domain.TransitionResult;
 import io.github.bsamsonov.paymentservice.payment.domain.TransitionResult.Applied;
@@ -20,6 +21,7 @@ import io.github.bsamsonov.paymentservice.payment.domain.TransitionResult.NoOp;
 import io.github.bsamsonov.paymentservice.payment.domain.TransitionResult.Rejected;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -68,12 +70,26 @@ public final class PaymentStatusApplier {
      */
     public TransitionResult apply(
             PaymentId id, PaymentStatus target, @Nullable FailureCode failureCode, EventOrigin origin) {
+        return apply(id, target, failureCode, origin, List.of());
+    }
+
+    /**
+     * Applies {@code target} as {@link #apply(PaymentId, PaymentStatus, FailureCode, EventOrigin)} does and appends the
+     * provider attempts that led to it in the same transaction (AC-15), whatever the result of the transition.
+     */
+    public TransitionResult apply(
+            PaymentId id,
+            PaymentStatus target,
+            @Nullable FailureCode failureCode,
+            EventOrigin origin,
+            List<ProviderAttempt> attempts) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("status change of payment " + id + " must run outside a transaction");
         }
         for (int attempt = 1; ; attempt++) {
             try {
-                return Objects.requireNonNull(transaction.execute(tx -> applyOnce(id, target, failureCode, origin)));
+                return Objects.requireNonNull(
+                        transaction.execute(tx -> applyOnce(id, target, failureCode, origin, attempts)));
             } catch (PaymentConcurrencyConflict conflict) {
                 if (attempt == MAX_ATTEMPTS) {
                     // No stack trace: whoever handles the rethrown conflict logs it (RC-14)
@@ -91,9 +107,14 @@ public final class PaymentStatusApplier {
     }
 
     private TransitionResult applyOnce(
-            PaymentId id, PaymentStatus target, @Nullable FailureCode failureCode, EventOrigin origin) {
+            PaymentId id,
+            PaymentStatus target,
+            @Nullable FailureCode failureCode,
+            EventOrigin origin,
+            List<ProviderAttempt> attempts) {
         PaymentForChange loaded =
                 payments.findForChange(id).orElseThrow(() -> new IllegalArgumentException("no payment " + id));
+        attempts.forEach(journal::append);
         Payment payment = loaded.payment();
         long sequenceNo = loaded.lastSequenceNo() + 1;
         TransitionResult result = payment.apply(target, failureCode);
