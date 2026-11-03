@@ -17,6 +17,15 @@ spring:
     mapper:
       allow-coercion-of-scalars: false
 
+payments:
+  # The only provider adapter in spec 001; Stripe comes with spec 003
+  provider: fake
+  # Currency allow-list (v1: USD only) with the minimum amount of each, in minor units
+  minimum-amounts:
+    USD: 50
+  # At most 8 digits in minor units
+  maximum-amount: 99999999
+
 server:
   shutdown: graceful
 
