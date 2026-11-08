@@ -44,7 +44,7 @@ updates the living docs its change affects; the last one sets `status: Implement
   provider attempt and `request_hash` written), `FakePaymentProvider` (success path).
   Tests first: `ProviderCallTransactionIT` (AC-13), `CreatePaymentUseCaseIT` (`provider_attempts` row in the status
   change's transaction, `payments.request_hash`; the acceptance tests over HTTP come in T7.2).
-- [ ] T7.2 (AC-1, AC-15, AC-17) `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`;
+- [x] T7.2 (AC-1, AC-15, AC-17) `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`;
   README: the create endpoint.
   Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column).
 - [ ] T8 (AC-2, AC-3, AC-4) Remaining provider outcomes: `DECLINED` → `402`, `REJECTED` → `502` + ERROR log,
