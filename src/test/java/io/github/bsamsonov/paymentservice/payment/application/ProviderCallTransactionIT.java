@@ -43,8 +43,10 @@ class ProviderCallTransactionIT {
     void callsTheProviderOutsideATransactionAfterTheCommit() {
         SEEN.set(null);
 
-        Payment payment = createPayment.create(
-                new CreatePaymentCommand(1999, "USD", "pm_card_visa", "order-" + UUID.randomUUID(), null, Map.of()));
+        Payment payment = createPayment
+                .create(new CreatePaymentCommand(
+                        1999, "USD", "pm_card_visa", "order-" + UUID.randomUUID(), null, Map.of()))
+                .payment();
 
         assertThat(SEEN.get()).isEqualTo(new SeenDuringCall(false, "PENDING", 1));
         assertThat(payment.status().name()).isEqualTo("SUCCEEDED");
