@@ -6,6 +6,7 @@ import io.github.bsamsonov.paymentservice.payment.application.port.PaymentProvid
 import io.github.bsamsonov.paymentservice.payment.application.port.PaymentRepository;
 import io.github.bsamsonov.paymentservice.payment.application.port.ProviderCall;
 import io.github.bsamsonov.paymentservice.payment.application.port.ProviderCharge;
+import io.github.bsamsonov.paymentservice.payment.application.port.StoredPayment;
 import io.github.bsamsonov.paymentservice.payment.application.port.TraceContext;
 import io.github.bsamsonov.paymentservice.payment.domain.CurrencyPolicy;
 import io.github.bsamsonov.paymentservice.payment.domain.EventOrigin;
@@ -74,12 +75,12 @@ public final class CreatePaymentUseCase {
     }
 
     /**
-     * Creates and charges a payment and returns it in its resulting status.
+     * Creates and charges a payment and returns it as stored, in its resulting status.
      *
      * @throws BusinessRuleViolation if the request breaks a business rule; no payment is created
      * @throws IllegalStateException if called inside a transaction: the provider would be called with it open
      */
-    public Payment create(CreatePaymentCommand command) {
+    public PaymentView create(CreatePaymentCommand command) {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             throw new IllegalStateException("a payment must be created outside a transaction");
         }
@@ -135,7 +136,9 @@ public final class CreatePaymentUseCase {
                     attempts.stream().map(ProviderAttempt::providerRequestId).toList());
             throw e;
         }
-        return payments.findById(id).orElseThrow(() -> new IllegalStateException("payment " + id + " vanished"));
+        StoredPayment stored =
+                payments.findById(id).orElseThrow(() -> new IllegalStateException("payment " + id + " vanished"));
+        return new PaymentView(stored.payment(), stored.createdAt(), stored.updatedAt());
     }
 
     private void apply(

@@ -11,7 +11,7 @@ public interface PaymentRepository {
     void add(Payment payment);
 
     /** A stored payment in its last committed state. */
-    Optional<Payment> findById(PaymentId id);
+    Optional<StoredPayment> findById(PaymentId id);
 
     /**
      * Loads a payment to change its status, together with the last journal sequence number, in one read (one snapshot).

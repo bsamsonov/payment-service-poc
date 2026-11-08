@@ -53,7 +53,9 @@ class CreatePaymentUseCaseIT {
     @Test
     @DisplayName("a charged payment is SUCCEEDED, journaled as created then changed, with its provider attempt")
     void createsAndChargesAPayment() {
-        Payment payment = createPayment.create(command("pm_card_visa", Map.of("order", "42")));
+        Payment payment = createPayment
+                .create(command("pm_card_visa", Map.of("order", "42")))
+                .payment();
 
         assertThat(payment.status()).isEqualTo(PaymentStatus.SUCCEEDED);
         assertThat(events(payment))
@@ -73,7 +75,7 @@ class CreatePaymentUseCaseIT {
     @DisplayName("the payment stores the hash of its canonical request; empty metadata hashes like none")
     void storesTheRequestHash() {
         CreatePaymentCommand command = command("pm_card_visa", Map.of());
-        Payment payment = createPayment.create(command);
+        Payment payment = createPayment.create(command).payment();
 
         Map<String, @Nullable Object> request = new HashMap<>();
         request.put("amount", 1999L);

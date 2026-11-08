@@ -3,6 +3,7 @@ package io.github.bsamsonov.paymentservice.payment.adapter.out.persistence;
 import io.github.bsamsonov.paymentservice.payment.application.port.PaymentConcurrencyConflict;
 import io.github.bsamsonov.paymentservice.payment.application.port.PaymentForChange;
 import io.github.bsamsonov.paymentservice.payment.application.port.PaymentRepository;
+import io.github.bsamsonov.paymentservice.payment.application.port.StoredPayment;
 import io.github.bsamsonov.paymentservice.payment.domain.FailureCode;
 import io.github.bsamsonov.paymentservice.payment.domain.Money;
 import io.github.bsamsonov.paymentservice.payment.domain.Payment;
@@ -40,8 +41,9 @@ class JpaPaymentRepository implements PaymentRepository {
     }
 
     @Override
-    public Optional<Payment> findById(PaymentId id) {
-        return payments.findById(id.value()).map(JpaPaymentRepository::toDomain);
+    public Optional<StoredPayment> findById(PaymentId id) {
+        return payments.findById(id.value())
+                .map(entity -> new StoredPayment(toDomain(entity), entity.getCreatedAt(), entity.getUpdatedAt()));
     }
 
     @Override
