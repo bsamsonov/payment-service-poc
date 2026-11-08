@@ -33,6 +33,22 @@ lefthook install                              # once per clone
 ./mvnw spring-boot:run                        # run locally; health: http://localhost:8080/actuator/health
 ```
 
+## API
+REST under `/api/v1`, contract-first: [`api/openapi.yaml`](api/openapi.yaml) is the source of truth; errors are
+RFC 9457 Problem Details. Spec: [001 payment core](specs/001-payment-core/spec.md).
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/v1/payments` | Creates a payment and charges the payment method; `201` with `Location: /api/v1/payments/{id}` and the payment |
+
+```bash
+curl -i localhost:8080/api/v1/payments -H 'Content-Type: application/json' \
+  -d '{"amount":1999,"currency":"USD","paymentMethodId":"pm_card_visa","externalReference":"order-42"}'
+```
+
+Amounts are integers in minor units (cents). Until spec 003 the service charges a fake provider
+(`payments.provider=fake`), which accepts the Stripe test payment method ids such as `pm_card_visa`.
+
 ## How this project is built
 | Layer | What runs |
 |---|---|
