@@ -36,7 +36,7 @@ final class PaymentWebMapper {
                 payment.amount().amount(),
                 payment.amount().currency().getCurrencyCode(),
                 payment.externalReference(),
-                PaymentStatus.valueOf(payment.status().name()),
+                toResponse(payment.status()),
                 NOTHING_REFUNDED,
                 view.createdAt().atOffset(ZoneOffset.UTC),
                 view.updatedAt().atOffset(ZoneOffset.UTC));
@@ -44,5 +44,17 @@ final class PaymentWebMapper {
         // Absent optional fields are omitted (api/openapi.yaml); the store keeps empty metadata as none
         response.setMetadata(payment.metadata().isEmpty() ? null : payment.metadata());
         return response;
+    }
+
+    // Exhaustive without default: a new domain status fails the build here, not a request at run time
+    private static PaymentStatus toResponse(io.github.bsamsonov.paymentservice.payment.domain.PaymentStatus status) {
+        return switch (status) {
+            case PENDING -> PaymentStatus.PENDING;
+            case PROCESSING -> PaymentStatus.PROCESSING;
+            case SUCCEEDED -> PaymentStatus.SUCCEEDED;
+            case FAILED -> PaymentStatus.FAILED;
+            case PARTIALLY_REFUNDED -> PaymentStatus.PARTIALLY_REFUNDED;
+            case REFUNDED -> PaymentStatus.REFUNDED;
+        };
     }
 }
