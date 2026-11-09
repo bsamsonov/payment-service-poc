@@ -121,8 +121,9 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
   `traceparent` continues that trace; given none (or an invalid one), a new trace is started and returned.
 - **AC-17** Given a created payment, then the payment carries `request_hash` (the event does not repeat it): SHA-256 of
   the canonical request (all request fields, keys sorted, no insignificant whitespace). Requests differing only in key
-  order or whitespace have the same hash; a different value in any field gives a different hash. (Used by 002 to
-  detect "same `Idempotency-Key`, different request" → `422`.)
+  order or whitespace have the same hash; a different value in any field gives a different hash. An absent field, a
+  `null` field and an empty `metadata` object count as the same request (storage keeps all three as none); an empty
+  string is a value. (Used by 002 to detect "same `Idempotency-Key`, different request" → `422`.)
 
 ## Errors
 | Situation | HTTP status | Problem `type` |
