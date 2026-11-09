@@ -57,6 +57,8 @@ Flyway, `src/main/resources/db/migration`:
 - `V4__payment_events.sql` — the audit log per spec; FK without cascade; `UNIQUE (payment_id, sequence_no)`; row and
   truncate triggers.
 - `V5__provider_attempts.sql` — the provider call log per spec; index on `payment_id`; the same triggers.
+- `V6__payments_metadata_not_null.sql` — `payments.metadata` default `{}`, `null` rows backfilled, `NOT NULL`
+  (T7.3, AC-17).
 
 Coded values are domains; the Java enums are the source of the sets, and an IT checks that every enum constant is
 accepted by its domain (T6). An entity field on a domain column declares `@Column(columnDefinition = "<domain>")`:
