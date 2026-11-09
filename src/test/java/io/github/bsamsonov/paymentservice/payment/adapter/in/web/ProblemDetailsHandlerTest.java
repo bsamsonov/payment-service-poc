@@ -49,6 +49,23 @@ class ProblemDetailsHandlerTest {
     }
 
     @Test
+    @DisplayName("an error raised before a controller is chosen is a problem too: 415, 405, 404")
+    void errorBeforeAControllerIsChosenIsAProblem() {
+        assertThat(mvc.post()
+                        .uri("/api/v1/payments")
+                        .contentType(MediaType.TEXT_PLAIN)
+                        .content("amount=1999"))
+                .hasStatus(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(mvc.delete().uri("/api/v1/payments/{id}", "01a1bd8f-e12a-7ccd-8537-f7f22d5bb92d"))
+                .hasStatus(HttpStatus.METHOD_NOT_ALLOWED)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(mvc.get().uri("/api/v1/no-such-resource"))
+                .hasStatus(HttpStatus.NOT_FOUND)
+                .hasContentType(MediaType.APPLICATION_PROBLEM_JSON);
+    }
+
+    @Test
     @DisplayName("an endpoint not implemented yet answers 501 as a problem")
     void notImplementedEndpointIsA501Problem() {
         assertThat(mvc.get().uri("/api/v1/payments/{id}", "01a1bd8f-e12a-7ccd-8537-f7f22d5bb92d"))

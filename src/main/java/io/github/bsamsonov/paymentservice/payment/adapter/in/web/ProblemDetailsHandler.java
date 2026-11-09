@@ -13,9 +13,10 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
  * Turns exceptions into RFC 9457 Problem Details: Spring MVC's own exceptions through the base class, anything
  * unexpected into a {@code 500} without details. The problem types of spec 001 come with T8 and T9.
  *
- * <p>Applies to this module's controllers only: every module with controllers brings its own handler (plan.md).
+ * <p>Applies app-wide, on purpose: errors raised before a controller is chosen (415, 405, 404) reach only an unscoped
+ * advice. Split into an app-level base and per-module handlers when a second module gets controllers (plan.md).
  */
-@RestControllerAdvice(basePackageClasses = PaymentsController.class)
+@RestControllerAdvice
 class ProblemDetailsHandler extends ResponseEntityExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(ProblemDetailsHandler.class);
