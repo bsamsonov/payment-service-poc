@@ -48,6 +48,13 @@ updates the living docs its change affects; the last one sets `status: Implement
   README: the create endpoint. The `GET` endpoints answer a `501` Problem until T10 (the generated `PaymentsApi` has no
   default methods); `501` is not part of the contract.
   Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column).
+- [ ] T7.3 (AC-17) `payments.metadata` is never null: `{}` when the request has none (migration `V6`, backfill, default,
+  `NOT NULL`); the persistence adapter stores the domain's metadata as is.
+  Tests first: `PersistenceMappingIT` (no metadata → `{}` in the column).
+- [ ] T7.4 (refactor) `createdAt`/`updatedAt` move into the domain `Payment`, set from the `Clock` on creation and on
+  every status change, instead of JPA auditing; `PaymentRepository.findById` and the use cases return `Payment`, and
+  `StoredPayment`/`PaymentView` are removed. Before T8 and T10 build on the read shape.
+  Tests first: domain tests for both timestamps; `CreatePaymentIT` checks them over HTTP.
 - [ ] T8 (AC-2, AC-3, AC-4) Remaining provider outcomes: `DECLINED` → `402`, `REJECTED` → `502` + ERROR log,
   `UNKNOWN` → `202` `PROCESSING`; `FailureMessages` dictionary; fake provider table complete.
   Tests first: `CreatePaymentIT` cases (parameterized declines, `OutputCaptureExtension`, timeout).
