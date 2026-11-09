@@ -45,7 +45,8 @@ updates the living docs its change affects; the last one sets `status: Implement
   Tests first: `ProviderCallTransactionIT` (AC-13), `CreatePaymentUseCaseIT` (`provider_attempts` row in the status
   change's transaction, `payments.request_hash`; the acceptance tests over HTTP come in T7.2).
 - [x] T7.2 (AC-1, AC-15, AC-17) `PaymentsController` `POST`, `PaymentWebMapper`, base `ProblemDetailsHandler`;
-  README: the create endpoint.
+  README: the create endpoint. The `GET` endpoints answer a `501` Problem until T10 (the generated `PaymentsApi` has no
+  default methods); `501` is not part of the contract.
   Tests first: `CreatePaymentIT` (AC-1, AC-15, AC-17 `payments` column).
 - [ ] T8 (AC-2, AC-3, AC-4) Remaining provider outcomes: `DECLINED` → `402`, `REJECTED` → `502` + ERROR log,
   `UNKNOWN` → `202` `PROCESSING`; `FailureMessages` dictionary; fake provider table complete.
@@ -58,7 +59,8 @@ updates the living docs its change affects; the last one sets `status: Implement
   Tests first: `PaymentRequestValidationTest` (slice; one case per `metadata` limit and per amount type; the `AUDIT`
   line has field names and rule codes, no values).
 - [ ] T10 (AC-7, AC-8, AC-9) `GetPaymentQuery`, `GET /payments/{id}` (malformed id → `404`) and
-  `GET /payments?externalReference=…` (≤ 20, newest first, missing parameter → `400`).
+  `GET /payments?externalReference=…` (≤ 20, newest first, missing parameter → `400`); replaces the `501` stubs of
+  T7.2.
   Tests first: `GetPaymentIT`, `FindPaymentsByExternalReferenceIT`.
 
 ## Tracing, ADR, final check (AC-16)
