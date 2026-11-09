@@ -9,7 +9,6 @@ import io.github.bsamsonov.paymentservice.payment.domain.Money;
 import io.github.bsamsonov.paymentservice.payment.domain.Payment;
 import io.github.bsamsonov.paymentservice.payment.domain.PaymentId;
 import java.util.Currency;
-import java.util.Map;
 import java.util.Optional;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -33,7 +32,7 @@ class JpaPaymentRepository implements PaymentRepository {
                 payment.paymentMethodId(),
                 payment.externalReference(),
                 payment.description(),
-                payment.metadata().isEmpty() ? null : payment.metadata(),
+                payment.metadata(),
                 DomainCodes.status(payment.status()),
                 payment.requestHash());
         entity.updateState(DomainCodes.status(payment.status()), failureCode(payment));
@@ -73,14 +72,13 @@ class JpaPaymentRepository implements PaymentRepository {
 
     private static Payment toDomain(PaymentEntity entity) {
         @Nullable String failureCode = entity.getFailureCode();
-        @Nullable Map<String, String> metadata = entity.getMetadata();
         return Payment.restore(
                 new PaymentId(entity.getId()),
                 new Money(entity.getAmount(), Currency.getInstance(entity.getCurrency())),
                 entity.getPaymentMethodId(),
                 entity.getExternalReference(),
                 entity.getDescription(),
-                metadata == null ? Map.of() : metadata,
+                entity.getMetadata(),
                 entity.getRequestHash(),
                 DomainCodes.toStatus(entity.getStatus()),
                 failureCode == null ? null : DomainCodes.toFailureCode(failureCode));

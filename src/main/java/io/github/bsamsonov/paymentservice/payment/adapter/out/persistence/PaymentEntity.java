@@ -36,7 +36,7 @@ class PaymentEntity {
     private @Nullable String description;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    private @Nullable Map<String, String> metadata;
+    private Map<String, String> metadata;
 
     @Column(columnDefinition = "payment_status")
     private String status;
@@ -71,7 +71,7 @@ class PaymentEntity {
             String paymentMethodId,
             String externalReference,
             @Nullable String description,
-            @Nullable Map<String, String> metadata,
+            Map<String, String> metadata,
             String status,
             String requestHash) {
         this.id = id;
@@ -115,7 +115,7 @@ class PaymentEntity {
         return description;
     }
 
-    @Nullable Map<String, String> getMetadata() {
+    Map<String, String> getMetadata() {
         return metadata;
     }
 

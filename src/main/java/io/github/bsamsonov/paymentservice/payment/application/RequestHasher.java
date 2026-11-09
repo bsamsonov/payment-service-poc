@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * SHA-256 of the canonical form of a request (AC-17): JSON with keys sorted at every level, no whitespace, absent and
- * null fields and empty objects omitted (storage keeps an empty {@code metadata} as null), strings escaped as in RFC
+ * null fields and empty objects omitted (no {@code metadata} and {@code {}} mean the same), strings escaped as in RFC
  * 8785. Spec 002 compares it to detect "same idempotency key, different request". Written by hand because the
  * application layer does not use Jackson.
  */

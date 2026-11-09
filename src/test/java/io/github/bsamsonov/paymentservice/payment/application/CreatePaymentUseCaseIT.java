@@ -72,7 +72,7 @@ class CreatePaymentUseCaseIT {
     }
 
     @Test
-    @DisplayName("the payment stores the hash of its canonical request; empty metadata hashes like none")
+    @DisplayName("the payment stores the hash of its canonical request; empty metadata hashes like none, stored as {}")
     void storesTheRequestHash() {
         CreatePaymentCommand command = command("pm_card_visa", Map.of());
         Payment payment = createPayment.create(command).payment();
@@ -87,6 +87,11 @@ class CreatePaymentUseCaseIT {
                         String.class,
                         payment.id().value()))
                 .isEqualTo(RequestHasher.hash(request));
+        assertThat(jdbc.queryForObject(
+                        "select metadata::text from payments where id = ?",
+                        String.class,
+                        payment.id().value()))
+                .isEqualTo("{}");
     }
 
     @Test

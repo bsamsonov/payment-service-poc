@@ -66,7 +66,7 @@ class PersistenceMappingIT {
     void stateUpdateIsStoredAndBumpsTheVersion() {
         UUID id = UUID.randomUUID();
         PaymentEntity saved = payments.save(new PaymentEntity(
-                id, 5000, "USD", "pm_card_chargeDeclined", "order-" + id, null, null, "PENDING", "c".repeat(64)));
+                id, 5000, "USD", "pm_card_chargeDeclined", "order-" + id, null, Map.of(), "PENDING", "c".repeat(64)));
 
         saved.updateState("FAILED", "card_declined");
         payments.save(saved);
@@ -81,7 +81,15 @@ class PersistenceMappingIT {
     void journalEntitiesWriteEveryColumn() {
         UUID paymentId = UUID.randomUUID();
         payments.save(new PaymentEntity(
-                paymentId, 1999, "USD", "pm_card_visa", "order-" + paymentId, null, null, "PENDING", "b".repeat(64)));
+                paymentId,
+                1999,
+                "USD",
+                "pm_card_visa",
+                "order-" + paymentId,
+                null,
+                Map.of(),
+                "PENDING",
+                "b".repeat(64)));
         String traceId = "0af7651916cd43dd8448eb211c80319c";
         Instant now = Instant.now();
         UUID eventId = UUID.randomUUID();
