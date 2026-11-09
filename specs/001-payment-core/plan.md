@@ -42,6 +42,9 @@ attempts of a charge are passed into the applier and appended inside each attemp
 the resulting status change or event (AC-15) and roll back with it. Optimistic locking relies on the payment entity
 loaded by `findForChange` in the same transaction; the domain carries no version (decided after PR B's review: keep it
 simple while each applier attempt is one transaction).
+`ProblemDetailsHandler` is scoped to the module's controllers (`basePackageClasses`), not app-wide: each module with
+controllers brings its own error policy; whether an app-level fallback is needed is decided with the second module that
+has controllers (005).
 Request hash (AC-17): an empty object is omitted like an absent or null field, because storage keeps an empty
 `metadata` as `null` and a reader cannot tell them apart; `{}` and no `metadata` are the same request.
 
