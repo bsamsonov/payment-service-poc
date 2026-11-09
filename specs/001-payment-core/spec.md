@@ -122,8 +122,8 @@ Fake provider, by `paymentMethodId` (same ids as Stripe test payment methods whe
 - **AC-17** Given a created payment, then the payment carries `request_hash` (the event does not repeat it): SHA-256 of
   the canonical request (all request fields, keys sorted, no insignificant whitespace). Requests differing only in key
   order or whitespace have the same hash; a different value in any field gives a different hash. An absent field, a
-  `null` field and an empty `metadata` object count as the same request (storage keeps all three as none); an empty
-  string is a value. (Used by 002 to detect "same `Idempotency-Key`, different request" → `422`.)
+  `null` field and an empty `metadata` object count as the same request: to the client they all mean "no value"; an
+  empty string is a value. (Used by 002 to detect "same `Idempotency-Key`, different request" → `422`.)
 
 ## Errors
 | Situation | HTTP status | Problem `type` |
@@ -167,8 +167,8 @@ data is read from `payments`, which is never deleted.
   operation) are one `CHECK` on the pair: `CLIENT`/`API`, `PROVIDER`/`PROVIDER_RESPONSE`.
 - `payments`: `id uuid` PK, `external_reference` (1–100, indexed with `created_at`), `payment_method_id`,
   `amount bigint` (> 0), `currency` (`^[A-Z]{3}$`), `status` (`payment_status`), `failure_code` (`failure_code`; set if
-  and only if `status = FAILED`), `description` (≤ 500), `metadata jsonb` (object), `request_hash` (AC-17), `created_at`,
-  `updated_at` (Spring Data auditing), `version` (optimistic lock).
+  and only if `status = FAILED`), `description` (≤ 500), `metadata jsonb` (object, not null: `{}` when the request has
+  none), `request_hash` (AC-17), `created_at`, `updated_at` (Spring Data auditing), `version` (optimistic lock).
 - `payment_events`: `id uuid` PK (UUIDv7), `payment_id` FK **without cascade**, `sequence_no` (max + 1, unique per
   payment), `event_type`, `from_status` (null only on `PAYMENT_CREATED`), `to_status`, `failure_code`
   (only with `to_status = FAILED`, required on `STATUS_CHANGED` to `FAILED`), `reason_code`, `actor_type` +

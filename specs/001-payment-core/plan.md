@@ -46,8 +46,8 @@ simple while each applier attempt is one transaction).
 controller is chosen (415, 405, 404), and those must be Problem Details too. When a second module gets controllers
 (005), it splits into an app-level base (Spring MVC exceptions, `500`) and per-module handlers for their own problem
 types. Spec 004 maps `AccessDeniedException` explicitly, or the catch-all turns it into a `500`.
-Request hash (AC-17): an empty object is omitted like an absent or null field, because storage keeps an empty
-`metadata` as `null` and a reader cannot tell them apart; `{}` and no `metadata` are the same request.
+Request hash (AC-17): an empty object is omitted like an absent or null field: `{}` and no `metadata` mean the same to
+the client, so they are the same request. Storage keeps both as `{}` (`metadata` is not null, migration `V6`).
 
 ## Data model and migrations
 Flyway, `src/main/resources/db/migration`:
