@@ -27,6 +27,8 @@ class SchemaConstraintsIT {
 
     private static final String UNIQUE_VIOLATION = "23505";
 
+    private static final String NOT_NULL_VIOLATION = "23502";
+
     @Autowired
     private JdbcTemplate jdbc;
 
@@ -125,6 +127,18 @@ class SchemaConstraintsIT {
                         """, UUID.randomUUID(), paymentId),
                 CHECK_VIOLATION,
                 "provider_attempts_trace_id_format");
+    }
+
+    @Test
+    void metadataIsAnEmptyObjectWhenNotGivenAndNeverNull() {
+        UUID paymentId = insertPayment("PENDING", null);
+
+        assertThat(jdbc.queryForObject("select metadata::text from payments where id = ?", String.class, paymentId))
+                .isEqualTo("{}");
+        assertViolation(
+                () -> jdbc.update("update payments set metadata = null where id = ?", paymentId),
+                NOT_NULL_VIOLATION,
+                "\"metadata\"");
     }
 
     private UUID insertPayment(String status, @Nullable String failureCode) {

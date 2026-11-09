@@ -41,7 +41,7 @@ final class PaymentWebMapper {
                 view.createdAt().atOffset(ZoneOffset.UTC),
                 view.updatedAt().atOffset(ZoneOffset.UTC));
         response.setDescription(payment.description());
-        // Absent optional fields are omitted (api/openapi.yaml); the store keeps empty metadata as none
+        // Absent optional fields are omitted (api/openapi.yaml); empty metadata counts as absent (AC-17)
         response.setMetadata(payment.metadata().isEmpty() ? null : payment.metadata());
         return response;
     }
