@@ -82,7 +82,7 @@ class RequestHasherTest {
     }
 
     @Test
-    @DisplayName("an empty metadata object and an absent one are the same request, as both are stored as null")
+    @DisplayName("an empty metadata object and an absent one are the same request: both mean no metadata")
     void emptyObjectIsOmitted() {
         assertThat(RequestHasher.canonicalJson(Map.of("amount", 1999L, "metadata", Map.of())))
                 .isEqualTo("{\"amount\":1999}");
