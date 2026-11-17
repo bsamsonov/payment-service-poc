@@ -7,7 +7,9 @@ stores payments in PostgreSQL and keeps an audit trail. Its main purpose is to d
 AI-assisted development workflow: specifications before code, test-first development, atomic commits, automated
 quality gates and multi-layer code review.
 
-**Status:** project bootstrap — build, quality gates, CI and workflow are in place; features follow as specs in `specs/`.
+**Status:** in development. Build, quality gates, CI and the workflow are in place. Spec [001 payment core](specs/001-payment-core/spec.md)
+is in progress: `POST /api/v1/payments` works (tasks T1–T7.3); provider failures, validation, reads and tracing follow
+(T7.4–T13 in [`tasks.md`](specs/001-payment-core/tasks.md)).
 
 ## Stack
 Java 25 · Spring Boot 4.1 · Spring MVC · PostgreSQL · Flyway · JPA/Hibernate ·
